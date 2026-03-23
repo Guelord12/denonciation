@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: denonciation-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 18.17.1
+      - key: DB_USER
+        fromDatabase:
+          name: denonciation-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: denonciation-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: denonciation-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: denonciation-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: denonciation-db
+          property: database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: NEWS_API_KEY
+        sync: false
+
+databases:
+  - name: denonciation-db
+    plan: free

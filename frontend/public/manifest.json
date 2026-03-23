@@ -1,0 +1,12 @@
+{
+  "short_name": "Dénonciation",
+  "name": "Dénonciation - Signalement d'abus",
+  "icons": [
+    { "src": "icon-192.png", "type": "image/png", "sizes": "192x192" },
+    { "src": "icon-512.png", "type": "image/png", "sizes": "512x512" }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#e63946",
+  "background_color": "#ffffff"
+}

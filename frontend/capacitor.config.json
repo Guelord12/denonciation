@@ -1,0 +1,13 @@
+{
+  "appId": "com.denonciation.app",
+  "appName": "Denonciation",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https",
+    "url": "http://192.168.1.100:5000"
+  },
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 3000, "backgroundColor": "#e63946" },
+    "Camera": { "android": { "allowEdit": true }, "ios": { "allowEdit": true } }
+  }
+}
