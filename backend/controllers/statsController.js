@@ -23,7 +23,8 @@ class StatsController {
     async getTemporalStats(req, res) {
         try {
             const { period = 'daily', startDate, endDate } = req.query;
-            let interval, format;
+            let interval;
+            let format;
             switch (period) {
                 case 'daily': interval = '1 day'; format = 'YYYY-MM-DD'; break;
                 case 'weekly': interval = '1 week'; format = 'IYYY-IW'; break;
@@ -39,26 +40,65 @@ class StatsController {
                 dateFilter = ` AND created_at BETWEEN $1 AND $2`;
                 values.push(startDate, endDate);
             }
-            const query = `
-                SELECT TO_CHAR(DATE_TRUNC($1, created_at), $2) as period_label, COUNT(*) as count
-                FROM reports
-                WHERE 1=1 ${dateFilter}
-                GROUP BY DATE_TRUNC($1, created_at)
-                ORDER BY DATE_TRUNC($1, created_at) ASC
-            `;
-            const intervalParam = interval.replace(' ', '');
-            const formatParam = format;
-            values.unshift(intervalParam, formatParam);
+            // Use DATE_TRUNC to group by interval
+            let groupByClause;
+            if (period === 'daily') groupByClause = "DATE_TRUNC('day', created_at)";
+            else if (period === 'weekly') groupByClause = "DATE_TRUNC('week', created_at)";
+            else if (period === 'monthly') groupByClause = "DATE_TRUNC('month', created_at)";
+            else if (period === 'quarterly') groupByClause = "DATE_TRUNC('quarter', created_at)";
+            else if (period === 'semester') groupByClause = "DATE_TRUNC('year', created_at) + INTERVAL '6 months' * (EXTRACT(MONTH FROM created_at)::int / 6)"; // complex
+            else groupByClause = "DATE_TRUNC('year', created_at)";
+
+            let query;
+            if (period === 'semester') {
+                // Custom semester grouping
+                query = `
+                    SELECT 
+                        CASE 
+                            WHEN EXTRACT(MONTH FROM created_at) <= 6 THEN TO_CHAR(created_at, 'YYYY-S1')
+                            ELSE TO_CHAR(created_at, 'YYYY-S2')
+                        END as period_label,
+                        COUNT(*) as count
+                    FROM reports
+                    WHERE 1=1 ${dateFilter}
+                    GROUP BY 
+                        CASE 
+                            WHEN EXTRACT(MONTH FROM created_at) <= 6 THEN TO_CHAR(created_at, 'YYYY-S1')
+                            ELSE TO_CHAR(created_at, 'YYYY-S2')
+                        END
+                    ORDER BY MIN(created_at) ASC
+                `;
+            } else {
+                query = `
+                    SELECT 
+                        TO_CHAR(DATE_TRUNC($1, created_at), $2) as period_label,
+                        COUNT(*) as count
+                    FROM reports
+                    WHERE 1=1 ${dateFilter}
+                    GROUP BY DATE_TRUNC($1, created_at)
+                    ORDER BY DATE_TRUNC($1, created_at) ASC
+                `;
+                const intervalParam = interval.replace(' ', '');
+                const formatParam = format;
+                values.unshift(intervalParam, formatParam);
+            }
+
             const result = await pool.query(query, values);
             const labels = result.rows.map(r => r.period_label);
             const counts = result.rows.map(r => parseInt(r.count));
+
+            // Category stats for the same period
             let categoryFilter = '';
-            if (startDate && endDate) categoryFilter = ` AND created_at BETWEEN $1 AND $2`;
-            const categoryValues = startDate && endDate ? [startDate, endDate] : [];
+            const categoryValues = [];
+            if (startDate && endDate) {
+                categoryFilter = ` AND created_at BETWEEN $1 AND $2`;
+                categoryValues.push(startDate, endDate);
+            }
             const categoryResult = await pool.query(
                 `SELECT categorie, COUNT(*) as count FROM reports WHERE 1=1 ${categoryFilter} GROUP BY categorie ORDER BY count DESC LIMIT 10`,
                 categoryValues
             );
+
             res.json({ period, data: { labels, counts }, categories: categoryResult.rows });
         } catch (err) {
             console.error('Erreur stats temporelles:', err);

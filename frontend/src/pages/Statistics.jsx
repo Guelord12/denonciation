@@ -3,12 +3,33 @@ import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import Layout from '../components/Layout';
 import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement,
-  Title, Tooltip, Legend, PointElement, LineElement, ArcElement
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Filler, // Import the Filler plugin
 } from 'chart.js';
 import { Bar, Line, Pie } from 'react-chartjs-2';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, PointElement, LineElement, ArcElement);
+// Register all required components
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement,
+  LineElement,
+  ArcElement,
+  Filler // Register Filler plugin
+);
 
 const Statistics = () => {
   const { t } = useTranslation();
@@ -48,18 +69,51 @@ const Statistics = () => {
 
   const lineChartData = {
     labels: temporalData.labels,
-    datasets: [{ label: t('statistics.totalReports'), data: temporalData.counts, borderColor: '#e63946', backgroundColor: 'rgba(230,57,70,0.2)', tension: 0.3, fill: true }]
-  };
-  const barChartData = {
-    labels: categories.map(c => c.categorie),
-    datasets: [{ label: t('statistics.totalReports'), data: categories.map(c => c.count), backgroundColor: '#e63946' }]
-  };
-  const pieChartData = {
-    labels: categories.map(c => c.categorie),
-    datasets: [{ data: categories.map(c => c.count), backgroundColor: ['#e63946','#f4a261','#2a9d8f','#e9c46a','#264653','#e76f51','#8ecae6','#219ebc','#ffb703','#fb8500'] }]
+    datasets: [
+      {
+        label: t('statistics.totalReports'),
+        data: temporalData.counts,
+        borderColor: '#e63946',
+        backgroundColor: 'rgba(230, 57, 70, 0.2)',
+        tension: 0.3,
+        fill: true,
+      },
+    ],
   };
 
-  if (loading) return <Layout><div className="container text-center">{t('common.loading')}</div></Layout>;
+  const barChartData = {
+    labels: categories.map(c => c.categorie),
+    datasets: [
+      {
+        label: t('statistics.totalReports'),
+        data: categories.map(c => c.count),
+        backgroundColor: '#e63946',
+      },
+    ],
+  };
+
+  const pieChartData = {
+    labels: categories.map(c => c.categorie),
+    datasets: [
+      {
+        data: categories.map(c => c.count),
+        backgroundColor: [
+          '#e63946', '#f4a261', '#2a9d8f', '#e9c46a', '#264653',
+          '#e76f51', '#8ecae6', '#219ebc', '#ffb703', '#fb8500'
+        ],
+      },
+    ],
+  };
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="container text-center" style={{ marginTop: '50px' }}>
+          {t('common.loading')}
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -108,13 +162,15 @@ const Statistics = () => {
         </div>
         <h2>{t('statistics.topReports')}</h2>
         <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '2rem' }}>
-          <thead><tr style={{ background: '#e63946', color: 'white' }}>
-            <th style={{ padding: '0.5rem' }}>{t('reports.reportTitle')}</th>
-            <th>{t('reports.category')}</th>
-            <th>{t('reports.city')}</th>
-            <th>{t('statistics.interactions')}</th>
-            <th>%</th>
-          </tr></thead>
+          <thead>
+            <tr style={{ background: '#e63946', color: 'white' }}>
+              <th style={{ padding: '0.5rem' }}>{t('reports.reportTitle')}</th>
+              <th>{t('reports.category')}</th>
+              <th>{t('reports.city')}</th>
+              <th>{t('statistics.interactions')}</th>
+              <th>%</th>
+             </tr>
+          </thead>
           <tbody>
             {topReports.map(r => (
               <tr key={r.id} style={{ borderBottom: '1px solid #ddd' }}>
@@ -128,7 +184,11 @@ const Statistics = () => {
           </tbody>
         </table>
         <h2>{t('statistics.topCities')}</h2>
-        <ul>{cityStats.map(c => <li key={c.ville_signalement}>{c.ville_signalement}: {c.count} signalements</li>)}</ul>
+        <ul>
+          {cityStats.map(c => (
+            <li key={c.ville_signalement}>{c.ville_signalement}: {c.count} signalements</li>
+          ))}
+        </ul>
       </div>
     </Layout>
   );
