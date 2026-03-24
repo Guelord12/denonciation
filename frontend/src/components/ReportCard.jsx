@@ -102,21 +102,42 @@ const ReportCard = ({ report, onUpdate }) => {
     }
   };
 
-  // Déterminer le type de fichier pour l'affichage
-  const getFileTypeIcon = (url) => {
-    if (!url) return '📄';
-    const ext = url.split('.').pop().toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return '🖼️';
-    if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return '🎥';
-    if (['mp3', 'wav', 'ogg'].includes(ext)) return '🎵';
-    if (ext === 'pdf') return '📑';
-    return '📎';
+  const renderEvidence = (url, index) => {
+    if (!url) return null;
+    const lowerUrl = url.toLowerCase();
+    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(lowerUrl);
+    const isVideo = /\.(mp4|mov|avi|mkv|webm)$/i.test(lowerUrl);
+    const isAudio = /\.(mp3|wav|ogg|flac)$/i.test(lowerUrl);
+
+    if (isImage) {
+      return (
+        <div key={index} className="evidence-image">
+          <a href={url} target="_blank" rel="noopener noreferrer">
+            <img src={url} alt={`Preuve ${index + 1}`} style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px' }} />
+          </a>
+        </div>
+      );
+    } else if (isVideo) {
+      return (
+        <div key={index} className="evidence-video">
+          <video controls src={url} style={{ maxWidth: '100%', maxHeight: '200px' }} />
+        </div>
+      );
+    } else {
+      // Pour audio et autres fichiers : lien cliquable
+      const icon = isAudio ? '🎵' : '📄';
+      return (
+        <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="evidence-link">
+          {icon} {isAudio ? 'Écouter l\'audio' : 'Télécharger le fichier'} (Preuve {index + 1})
+        </a>
+      );
+    }
   };
 
   return (
     <div className="report-card">
       <div className="report-header">
-        <span className="avatar-icon">👤</span> {/* icône au lieu de l'image */}
+        <span className="avatar-icon">👤</span>
         <span>Anonyme</span>
         <span>{new Date(report.created_at).toLocaleString('fr-FR')}</span>
       </div>
@@ -125,12 +146,8 @@ const ReportCard = ({ report, onUpdate }) => {
       <p>{report.description}</p>
 
       {report.preuves && report.preuves.length > 0 && (
-        <div className="evidence">
-          {report.preuves.map((url, idx) => (
-            <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="evidence-link">
-              {getFileTypeIcon(url)} Preuve {idx + 1}
-            </a>
-          ))}
+        <div className="evidence-container">
+          {report.preuves.map((url, idx) => renderEvidence(url, idx))}
         </div>
       )}
 
