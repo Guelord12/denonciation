@@ -1,3 +1,4 @@
+const pool = require('../config/db');
 const Live = require('../models/Live');
 const LiveMessage = require('../models/LiveMessage');
 const LiveParticipant = require('../models/LiveParticipant');

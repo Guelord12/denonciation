@@ -71,7 +71,7 @@ const CommentSection = ({ reportId }) => {
         {comments.map(comment => (
           <div key={comment.id} className="comment">
             <div className="comment-header">
-              <img src="/anonymous-avatar.png" alt="Anonyme" />
+              <span className="user-icon">👤</span>
               <strong>Anonyme</strong>
               <span>{formatDate(comment.created_at)}</span>
             </div>
@@ -84,7 +84,7 @@ const CommentSection = ({ reportId }) => {
                 {comment.replies.map(reply => (
                   <div key={reply.id} className="reply">
                     <div className="reply-header">
-                      <img src="/anonymous-avatar.png" alt="Anonyme" />
+                      <span className="user-icon">👤</span>
                       <strong>Anonyme</strong>
                       <span>{formatDate(reply.created_at)}</span>
                     </div>

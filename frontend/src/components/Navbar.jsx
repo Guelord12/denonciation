@@ -19,7 +19,6 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      {/* Logo supprimé - remplacé par un titre simple */}
       <div className="navbar-brand" onClick={() => navigate('/')}>
         <span className="brand-text">Dénonciation</span>
       </div>
@@ -40,7 +39,7 @@ const Navbar = () => {
         <DarkModeToggle />
         {user && (
           <div className="user-info">
-            <img src={user.avatar || '/default-avatar.png'} alt="avatar" className="user-avatar" />
+            <span className="user-icon">👤</span>
             <span>{user.username}</span>
             <button onClick={handleLogout} className="btn-outline">{t('nav.logout')}</button>
           </div>

@@ -26,10 +26,33 @@ class Live {
     }
 
     static async updateStatus(id, status) {
-        const result = await pool.query(
-            `UPDATE lives SET status = $1, started_at = CASE WHEN $1 = 'live' AND started_at IS NULL THEN CURRENT_TIMESTAMP ELSE started_at END, ended_at = CASE WHEN $1 = 'ended' THEN CURRENT_TIMESTAMP ELSE ended_at END WHERE id = $2 RETURNING *`,
-            [status, id]
-        );
+        let query;
+        let values;
+        if (status === 'live') {
+            query = `
+                UPDATE lives 
+                SET status = $1, 
+                    started_at = CASE WHEN started_at IS NULL THEN CURRENT_TIMESTAMP ELSE started_at END,
+                    ended_at = ended_at
+                WHERE id = $2 
+                RETURNING *
+            `;
+            values = [status, id];
+        } else if (status === 'ended') {
+            query = `
+                UPDATE lives 
+                SET status = $1, 
+                    started_at = started_at,
+                    ended_at = CURRENT_TIMESTAMP
+                WHERE id = $2 
+                RETURNING *
+            `;
+            values = [status, id];
+        } else {
+            query = `UPDATE lives SET status = $1 WHERE id = $2 RETURNING *`;
+            values = [status, id];
+        }
+        const result = await pool.query(query, values);
         return result.rows[0];
     }
 

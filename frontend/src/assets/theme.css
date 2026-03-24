@@ -113,6 +113,11 @@ body.dark {
   object-fit: cover;
 }
 
+.user-icon {
+  font-size: 1.2rem;
+  margin-right: 4px;
+}
+
 button {
   background-color: var(--primary-red);
   color: white;

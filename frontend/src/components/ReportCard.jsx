@@ -105,7 +105,7 @@ const ReportCard = ({ report, onUpdate }) => {
   return (
     <div className="report-card">
       <div className="report-header">
-        <img src="/anonymous-avatar.png" alt="Anonyme" />
+        <span className="user-icon">👤</span>
         <span>Anonyme</span>
         <span>{new Date(report.created_at).toLocaleString('fr-FR')}</span>
       </div>

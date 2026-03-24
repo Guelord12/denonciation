@@ -76,7 +76,7 @@ const LiveChat = ({ liveId, isHost }) => {
               <h4>Participants ({participantsCount})</h4>
               <ul>
                 {participants.map(p => (
-                  <li key={p.id}><img src={p.avatar || '/anonymous-avatar.png'} alt="" /> <span>Anonyme</span></li>
+                  <li key={p.id}><span className="user-icon">👤</span> <span>Anonyme</span></li>
                 ))}
               </ul>
             </div>
