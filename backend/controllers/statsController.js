@@ -22,87 +22,86 @@ class StatsController {
 
     async getTemporalStats(req, res) {
         try {
-            const { period = 'daily', startDate, endDate } = req.query;
-            let interval;
-            let format;
+            const { period = 'daily' } = req.query;
+            let dateTrunc, format;
             switch (period) {
-                case 'daily': interval = '1 day'; format = 'YYYY-MM-DD'; break;
-                case 'weekly': interval = '1 week'; format = 'IYYY-IW'; break;
-                case 'monthly': interval = '1 month'; format = 'YYYY-MM'; break;
-                case 'quarterly': interval = '3 months'; format = 'YYYY-Q'; break;
-                case 'semester': interval = '6 months'; format = 'YYYY-S'; break;
-                case 'yearly': interval = '1 year'; format = 'YYYY'; break;
-                default: interval = '1 day'; format = 'YYYY-MM-DD';
+                case 'daily':
+                    dateTrunc = 'day';
+                    format = 'YYYY-MM-DD';
+                    break;
+                case 'weekly':
+                    dateTrunc = 'week';
+                    format = 'IYYY-IW';
+                    break;
+                case 'monthly':
+                    dateTrunc = 'month';
+                    format = 'YYYY-MM';
+                    break;
+                case 'quarterly':
+                    dateTrunc = 'quarter';
+                    format = 'YYYY-"Q"Q';
+                    break;
+                case 'semester':
+                    // semestre : premier ou second semestre
+                    dateTrunc = 'month';
+                    // on va regrouper manuellement par semestre
+                    break;
+                case 'yearly':
+                    dateTrunc = 'year';
+                    format = 'YYYY';
+                    break;
+                default:
+                    dateTrunc = 'day';
+                    format = 'YYYY-MM-DD';
             }
-            let dateFilter = '';
-            const values = [];
-            if (startDate && endDate) {
-                dateFilter = ` AND created_at BETWEEN $1 AND $2`;
-                values.push(startDate, endDate);
-            }
-            // Use DATE_TRUNC to group by interval
-            let groupByClause;
-            if (period === 'daily') groupByClause = "DATE_TRUNC('day', created_at)";
-            else if (period === 'weekly') groupByClause = "DATE_TRUNC('week', created_at)";
-            else if (period === 'monthly') groupByClause = "DATE_TRUNC('month', created_at)";
-            else if (period === 'quarterly') groupByClause = "DATE_TRUNC('quarter', created_at)";
-            else if (period === 'semester') groupByClause = "DATE_TRUNC('year', created_at) + INTERVAL '6 months' * (EXTRACT(MONTH FROM created_at)::int / 6)"; // complex
-            else groupByClause = "DATE_TRUNC('year', created_at)";
 
-            let query;
+            let query, result;
             if (period === 'semester') {
-                // Custom semester grouping
+                // Groupement personnalisé pour les semestres
                 query = `
                     SELECT 
                         CASE 
-                            WHEN EXTRACT(MONTH FROM created_at) <= 6 THEN TO_CHAR(created_at, 'YYYY-S1')
-                            ELSE TO_CHAR(created_at, 'YYYY-S2')
+                            WHEN EXTRACT(MONTH FROM created_at) <= 6 THEN TO_CHAR(created_at, 'YYYY') || '-S1'
+                            ELSE TO_CHAR(created_at, 'YYYY') || '-S2'
                         END as period_label,
                         COUNT(*) as count
                     FROM reports
-                    WHERE 1=1 ${dateFilter}
-                    GROUP BY 
-                        CASE 
-                            WHEN EXTRACT(MONTH FROM created_at) <= 6 THEN TO_CHAR(created_at, 'YYYY-S1')
-                            ELSE TO_CHAR(created_at, 'YYYY-S2')
-                        END
-                    ORDER BY MIN(created_at) ASC
+                    GROUP BY period_label
+                    ORDER BY period_label ASC
                 `;
+                result = await pool.query(query);
             } else {
                 query = `
                     SELECT 
                         TO_CHAR(DATE_TRUNC($1, created_at), $2) as period_label,
                         COUNT(*) as count
                     FROM reports
-                    WHERE 1=1 ${dateFilter}
                     GROUP BY DATE_TRUNC($1, created_at)
                     ORDER BY DATE_TRUNC($1, created_at) ASC
                 `;
-                const intervalParam = interval.replace(' ', '');
-                const formatParam = format;
-                values.unshift(intervalParam, formatParam);
+                result = await pool.query(query, [dateTrunc, format]);
             }
 
-            const result = await pool.query(query, values);
             const labels = result.rows.map(r => r.period_label);
             const counts = result.rows.map(r => parseInt(r.count));
 
-            // Category stats for the same period
-            let categoryFilter = '';
-            const categoryValues = [];
-            if (startDate && endDate) {
-                categoryFilter = ` AND created_at BETWEEN $1 AND $2`;
-                categoryValues.push(startDate, endDate);
-            }
-            const categoryResult = await pool.query(
-                `SELECT categorie, COUNT(*) as count FROM reports WHERE 1=1 ${categoryFilter} GROUP BY categorie ORDER BY count DESC LIMIT 10`,
-                categoryValues
-            );
+            // Récupérer les catégories aussi (optionnel)
+            const categoryResult = await pool.query(`
+                SELECT categorie, COUNT(*) as count
+                FROM reports
+                GROUP BY categorie
+                ORDER BY count DESC
+                LIMIT 10
+            `);
 
-            res.json({ period, data: { labels, counts }, categories: categoryResult.rows });
+            res.json({
+                period,
+                data: { labels, counts },
+                categories: categoryResult.rows
+            });
         } catch (err) {
             console.error('Erreur stats temporelles:', err);
-            res.status(500).json({ error: 'Erreur lors de la récupération des statistiques' });
+            res.status(500).json({ error: 'Erreur lors de la récupération des statistiques temporelles' });
         }
     }
 
@@ -133,9 +132,14 @@ class StatsController {
 
     async getCityStats(req, res) {
         try {
-            const result = await pool.query(
-                `SELECT ville_signalement, COUNT(*) as count FROM reports WHERE ville_signalement IS NOT NULL GROUP BY ville_signalement ORDER BY count DESC LIMIT 10`
-            );
+            const result = await pool.query(`
+                SELECT ville_signalement, COUNT(*) as count
+                FROM reports
+                WHERE ville_signalement IS NOT NULL
+                GROUP BY ville_signalement
+                ORDER BY count DESC
+                LIMIT 10
+            `);
             res.json(result.rows);
         } catch (err) {
             console.error('Erreur statistiques villes:', err);
