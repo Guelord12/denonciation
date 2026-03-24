@@ -19,10 +19,15 @@ const Navbar = () => {
 
   return (
     <nav className="navbar">
-      <div className="logo" onClick={() => navigate('/')}>
-        <img src="/logo.png" alt="Dénonciation" />
+      {/* Logo supprimé - remplacé par un titre simple */}
+      <div className="navbar-brand" onClick={() => navigate('/')}>
+        <span className="brand-text">Dénonciation</span>
       </div>
-      <button className="mobile-menu-btn" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
+
+      <button className="mobile-menu-btn" onClick={() => setMenuOpen(!menuOpen)}>
+        ☰
+      </button>
+
       <div className={`nav-links ${menuOpen ? 'open' : ''}`}>
         <Link to="/" onClick={() => setMenuOpen(false)}>{t('nav.home')}</Link>
         <Link to="/my-reports" onClick={() => setMenuOpen(false)}>{t('nav.myReports')}</Link>

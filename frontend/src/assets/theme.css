@@ -72,10 +72,10 @@ body.dark {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.navbar .logo {
-  height: 20px;
-  width: auto;
+.navbar-brand {
   cursor: pointer;
+  font-size: 1.5rem;
+  font-weight: bold;
 }
 
 .nav-links {
