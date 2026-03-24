@@ -556,6 +556,40 @@ body.dark .assistant-answer {
   background: var(--gray-800);
 }
 
+/* Rendre les images responsives */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Amélioration de l'affichage sur mobile */
+@media (max-width: 768px) {
+  .navbar {
+    flex-direction: column;
+    text-align: center;
+  }
+  .nav-links {
+    justify-content: center;
+  }
+  form {
+    margin: 1rem;
+    padding: 1rem;
+  }
+  .assistant-window {
+    width: calc(100vw - 40px);
+    right: -10px;
+  }
+  .live-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .stats-cards {
+    grid-template-columns: 1fr !important;
+  }
+  .news-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .navbar {
