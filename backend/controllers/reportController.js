@@ -2,6 +2,16 @@ const pool = require('../config/db');
 const Report = require('../models/Report');
 const Notification = require('../models/Notification');
 const moderationService = require('../services/moderationService');
+const cloudinary = require('cloudinary').v2;
+const fs = require('fs');
+const path = require('path');
+
+// Configuration Cloudinary
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
 class ReportController {
     async createReport(req, res) {
@@ -86,10 +96,19 @@ class ReportController {
     async uploadEvidence(req, res) {
         try {
             if (!req.file) return res.status(400).json({ error: 'Aucun fichier uploadé' });
-            const fileUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-            res.json({ url: fileUrl, filename: req.file.filename });
+
+            // Upload vers Cloudinary
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                folder: 'denonciation',
+                resource_type: 'auto' // auto détecte image, vidéo, etc.
+            });
+
+            // Supprimer le fichier local temporaire
+            fs.unlinkSync(req.file.path);
+
+            res.json({ url: result.secure_url, publicId: result.public_id });
         } catch (err) {
-            console.error('Erreur upload:', err);
+            console.error('Erreur upload Cloudinary:', err);
             res.status(500).json({ error: 'Erreur lors de l\'upload' });
         }
     }
