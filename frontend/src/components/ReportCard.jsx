@@ -102,22 +102,38 @@ const ReportCard = ({ report, onUpdate }) => {
     }
   };
 
+  // Déterminer le type de fichier pour l'affichage
+  const getFileTypeIcon = (url) => {
+    if (!url) return '📄';
+    const ext = url.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return '🖼️';
+    if (['mp4', 'mov', 'avi', 'mkv'].includes(ext)) return '🎥';
+    if (['mp3', 'wav', 'ogg'].includes(ext)) return '🎵';
+    if (ext === 'pdf') return '📑';
+    return '📎';
+  };
+
   return (
     <div className="report-card">
       <div className="report-header">
-        <span className="user-icon">👤</span>
+        <span className="avatar-icon">👤</span> {/* icône au lieu de l'image */}
         <span>Anonyme</span>
         <span>{new Date(report.created_at).toLocaleString('fr-FR')}</span>
       </div>
+
       <h3>{report.titre}</h3>
       <p>{report.description}</p>
+
       {report.preuves && report.preuves.length > 0 && (
         <div className="evidence">
           {report.preuves.map((url, idx) => (
-            <a key={idx} href={url} target="_blank" rel="noopener noreferrer">Preuve {idx+1}</a>
+            <a key={idx} href={url} target="_blank" rel="noopener noreferrer" className="evidence-link">
+              {getFileTypeIcon(url)} Preuve {idx + 1}
+            </a>
           ))}
         </div>
       )}
+
       <div className="actions">
         <button onClick={handleLike} className={liked ? 'active' : ''}>👍 {likeCount}</button>
         <button onClick={handleDislike} className={disliked ? 'active' : ''}>👎 {dislikeCount}</button>
