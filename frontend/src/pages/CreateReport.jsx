@@ -24,6 +24,7 @@ const CreateReport = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileInputRef = useRef(null);
+  const [previews, setPreviews] = useState([]); // pour stocker les URLs locales temporaires
 
   const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -48,6 +49,11 @@ const CreateReport = () => {
     if (files.length === 0) return;
     setUploading(true);
     setError('');
+
+    // Prévisualisations locales
+    const newPreviews = files.map(file => URL.createObjectURL(file));
+    setPreviews(prev => [...prev, ...newPreviews]);
+
     const uploadedUrls = [];
     for (const file of files) {
       try {
@@ -60,6 +66,14 @@ const CreateReport = () => {
     setForm(prev => ({ ...prev, preuves: [...prev.preuves, ...uploadedUrls] }));
     setUploading(false);
     fileInputRef.current.value = '';
+  };
+
+  const removeEvidence = (index) => {
+    setForm(prev => ({
+      ...prev,
+      preuves: prev.preuves.filter((_, i) => i !== index)
+    }));
+    setPreviews(prev => prev.filter((_, i) => i !== index));
   };
 
   const getLocation = () => {
@@ -90,7 +104,27 @@ const CreateReport = () => {
     }
   };
 
-  const removeEvidence = (index) => setForm(prev => ({ ...prev, preuves: prev.preuves.filter((_, i) => i !== index) }));
+  const getMediaType = (url) => {
+    const ext = url.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)) return 'video';
+    return 'file';
+  };
+
+  const renderPreview = (url, idx) => {
+    const type = getMediaType(url);
+    if (type === 'image') {
+      return <img src={url} alt={`preview-${idx}`} className="preview-image" />;
+    } else if (type === 'video') {
+      return (
+        <video controls className="preview-video">
+          <source src={url} />
+        </video>
+      );
+    } else {
+      return <span className="preview-file">📄 Fichier joint</span>;
+    }
+  };
 
   return (
     <Layout>
@@ -114,12 +148,12 @@ const CreateReport = () => {
             </div>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple style={{ display: 'none' }} />
             {uploading && <p>{t('common.loading')}</p>}
-            {form.preuves.length > 0 && (
-              <div className="evidence-list" style={{ marginTop: '0.5rem' }}>
-                {form.preuves.map((url, idx) => (
-                  <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <a href={url} target="_blank" rel="noopener noreferrer">Preuve {idx+1}</a>
-                    <button type="button" onClick={() => removeEvidence(idx)} style={{ padding: '0.2rem 0.5rem' }}>✖</button>
+            {previews.length > 0 && (
+              <div className="previews-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginTop: '1rem' }}>
+                {previews.map((url, idx) => (
+                  <div key={idx} className="preview-item" style={{ position: 'relative', width: '150px' }}>
+                    {renderPreview(url, idx)}
+                    <button type="button" onClick={() => removeEvidence(idx)} style={{ position: 'absolute', top: '5px', right: '5px', background: 'red', color: 'white', borderRadius: '50%', width: '20px', height: '20px', fontSize: '12px', padding: '0' }}>✖</button>
                   </div>
                 ))}
               </div>

@@ -608,3 +608,57 @@ img {
     right: -10px;
   }
 }
+
+/* Gallerie de preuves dans ReportCard */
+.evidence-gallery {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.evidence-item {
+  max-width: 200px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f9f9f9;
+}
+
+.evidence-image {
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+}
+
+.evidence-video {
+  width: 100%;
+  max-height: 150px;
+}
+
+.evidence-link {
+  display: block;
+  padding: 0.5rem;
+  text-align: center;
+  text-decoration: none;
+  color: #e63946;
+}
+
+/* Prévisualisation dans CreateReport */
+.preview-image,
+.preview-video {
+  width: 100%;
+  height: auto;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.preview-file {
+  display: block;
+  text-align: center;
+  font-size: 0.8rem;
+  background: #eee;
+  padding: 0.5rem;
+  border-radius: 4px;
+}

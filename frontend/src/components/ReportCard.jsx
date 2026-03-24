@@ -102,34 +102,38 @@ const ReportCard = ({ report, onUpdate }) => {
     }
   };
 
-  const renderEvidence = (url, index) => {
-    if (!url) return null;
-    const lowerUrl = url.toLowerCase();
-    const isImage = /\.(jpg|jpeg|png|gif|webp|bmp)$/i.test(lowerUrl);
-    const isVideo = /\.(mp4|mov|avi|mkv|webm)$/i.test(lowerUrl);
-    const isAudio = /\.(mp3|wav|ogg|flac)$/i.test(lowerUrl);
+  // Fonction pour déterminer le type de fichier à partir de l'URL
+  const getMediaType = (url) => {
+    const ext = url.split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+    if (['mp4', 'mov', 'avi', 'mkv', 'webm'].includes(ext)) return 'video';
+    return 'file';
+  };
 
-    if (isImage) {
+  // Affichage d'une preuve sous forme de miniature
+  const renderEvidence = (url, idx) => {
+    const type = getMediaType(url);
+    if (type === 'image') {
       return (
-        <div key={index} className="evidence-image">
-          <a href={url} target="_blank" rel="noopener noreferrer">
-            <img src={url} alt={`Preuve ${index + 1}`} style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '4px' }} />
-          </a>
+        <div key={idx} className="evidence-item">
+          <img src={url} alt={`Preuve ${idx + 1}`} className="evidence-image" />
         </div>
       );
-    } else if (isVideo) {
+    } else if (type === 'video') {
       return (
-        <div key={index} className="evidence-video">
-          <video controls src={url} style={{ maxWidth: '100%', maxHeight: '200px' }} />
+        <div key={idx} className="evidence-item">
+          <video controls className="evidence-video">
+            <source src={url} />
+          </video>
         </div>
       );
     } else {
-      // Pour audio et autres fichiers : lien cliquable
-      const icon = isAudio ? '🎵' : '📄';
       return (
-        <a key={index} href={url} target="_blank" rel="noopener noreferrer" className="evidence-link">
-          {icon} {isAudio ? 'Écouter l\'audio' : 'Télécharger le fichier'} (Preuve {index + 1})
-        </a>
+        <div key={idx} className="evidence-item">
+          <a href={url} target="_blank" rel="noopener noreferrer" className="evidence-link">
+            📄 Fichier joint {idx + 1}
+          </a>
+        </div>
       );
     }
   };
@@ -137,25 +141,30 @@ const ReportCard = ({ report, onUpdate }) => {
   return (
     <div className="report-card">
       <div className="report-header">
-        <span className="avatar-icon">👤</span>
+        <img src="/anonymous-avatar.png" alt="Anonyme" />
         <span>Anonyme</span>
         <span>{new Date(report.created_at).toLocaleString('fr-FR')}</span>
       </div>
-
       <h3>{report.titre}</h3>
       <p>{report.description}</p>
-
       {report.preuves && report.preuves.length > 0 && (
-        <div className="evidence-container">
+        <div className="evidence-gallery">
           {report.preuves.map((url, idx) => renderEvidence(url, idx))}
         </div>
       )}
-
       <div className="actions">
-        <button onClick={handleLike} className={liked ? 'active' : ''}>👍 {likeCount}</button>
-        <button onClick={handleDislike} className={disliked ? 'active' : ''}>👎 {dislikeCount}</button>
-        <button onClick={handleWitness} className={witnessed ? 'active' : ''}>👁️ {witnessCount}</button>
-        <button onClick={handleShare} className={shared ? 'active' : ''}>📤 {sharesCount}</button>
+        <button onClick={handleLike} className={liked ? 'active' : ''}>
+          👍 {likeCount}
+        </button>
+        <button onClick={handleDislike} className={disliked ? 'active' : ''}>
+          👎 {dislikeCount}
+        </button>
+        <button onClick={handleWitness} className={witnessed ? 'active' : ''}>
+          👁️ {witnessCount}
+        </button>
+        <button onClick={handleShare} className={shared ? 'active' : ''}>
+          📤 {sharesCount}
+        </button>
         <Link to={`/report/${report.id}`}>💬 Commenter</Link>
       </div>
     </div>
