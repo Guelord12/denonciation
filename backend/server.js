@@ -58,6 +58,8 @@ app.use((req, res) => {
 
 app.use('/api/subscriptions', require('./routes/subscriptions'));
 
+app.use('/api/setup', require('./routes/setup'));
+
 app.use((err, req, res, next) => {
     console.error('Erreur serveur:', err.stack);
     res.status(500).json({ error: 'Erreur interne du serveur' });
