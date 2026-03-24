@@ -47,19 +47,37 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/assistant', require('./routes/assistant'));
 app.use('/api/follows', require('./routes/follows'));
 app.use('/api/shares', require('./routes/shares'));
+app.use('/api/subscriptions', require('./routes/subscriptions'));
+app.use('/api/setup', require('./routes/setup'));
 
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// ==================================================
+// ROUTE TEMPORAIRE POUR INITIALISER LA BASE DE DONNÉES
+// À SUPPRIMER APRÈS UTILISATION
+// ==================================================
+app.get('/api/setup/init-db', async (req, res) => {
+    try {
+        const sqlPath = path.join(__dirname, '../database/schema.sql');
+        const sql = fs.readFileSync(sqlPath, 'utf8');
+        const pool = require('./config/db');
+        await pool.query(sql);
+        res.send('✅ Base de données initialisée avec succès !');
+    } catch (err) {
+        console.error('Erreur lors de l’initialisation:', err);
+        res.status(500).send('❌ Erreur : ' + err.message);
+    }
+});
+// ==================================================
+
+// Middleware 404 – doit être après toutes les routes
 app.use((req, res) => {
     res.status(404).json({ error: 'Route non trouvée' });
 });
 
-app.use('/api/subscriptions', require('./routes/subscriptions'));
-
-app.use('/api/setup', require('./routes/setup'));
-
+// Gestion des erreurs globales
 app.use((err, req, res, next) => {
     console.error('Erreur serveur:', err.stack);
     res.status(500).json({ error: 'Erreur interne du serveur' });
