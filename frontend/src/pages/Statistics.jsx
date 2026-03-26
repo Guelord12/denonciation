@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Layout from '../components/Layout';
 import {
@@ -33,7 +32,6 @@ ChartJS.register(
 
 const Statistics = () => {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const [period, setPeriod] = useState('daily');
   const [temporalData, setTemporalData] = useState({ labels: [], counts: [] });
   const [categories, setCategories] = useState([]);
@@ -65,13 +63,8 @@ const Statistics = () => {
       setGeneralStats(generalRes.data);
     } catch (err) {
       console.error('Erreur chargement stats:', err);
-      if (err.response?.status === 401) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        navigate('/login');
-        return;
-      }
-      setError(err.message);
+      // Afficher l'erreur sans rediriger
+      setError(err.response?.data?.error || err.message);
     } finally {
       setLoading(false);
     }
