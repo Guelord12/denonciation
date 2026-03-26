@@ -11,7 +11,9 @@
       "resizeMode": "contain",
       "backgroundColor": "#e63946"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.denonciation.app"
@@ -22,15 +24,16 @@
         "backgroundColor": "#e63946"
       },
       "package": "com.denonciation.app",
-      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "ACCESS_FINE_LOCATION"]
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ]
     },
     "web": {
       "favicon": "./assets/logo.png"
-    },
-    "extra": {
-      "eas": {
-        "projectId": "your-eas-project-id"
-      }
     },
     "plugins": [
       [
@@ -51,6 +54,12 @@
           "locationAlwaysAndWhenInUsePermission": "Allow Dénonciation to use your location to geotag reports."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "44c4f747-331a-49c1-9d82-aa189222a115"
+      }
+    },
+    "owner": "galadji12"
   }
 }
