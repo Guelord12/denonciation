@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://denonciation.onrender.com/api';
+// URL fixe du backend sur Render
+const API_URL = 'https://denonciation.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -18,13 +19,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Afficher l'erreur détaillée dans la console
-    if (error.response) {
-      console.error('API Error Response:', error.response.status, error.response.data);
-    } else if (error.request) {
-      console.error('No response received:', error.request);
-    } else {
-      console.error('Error:', error.message);
+    if (error.response?.status === 401) {
+      // Token invalide ou expiré : effacer et rediriger vers login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

@@ -8,22 +8,16 @@ import Layout from '../components/Layout';
 import AssistantChatbot from '../components/AssistantChatbot';
 import { useTranslation } from 'react-i18next';
 
-const Home = () => {
+export default function HomeScreen({ navigation }) {
   const { t } = useTranslation();
   const { user } = useAuth();
   const [reports, setReports] = useState([]);
   const [lives, setLives] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);;
-
   const fetchData = async () => {
     try {
-      let city = user?.ville_residence || '';
+      const city = user?.ville_residence || '';
       const livesRes = await api.get(`/lives/active/filtered?city=${city}`);
       setLives(livesRes.data);
       const reportsData = await reportsService.getAll(30);
@@ -34,6 +28,12 @@ const Home = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user) {
+      fetchData();
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -75,6 +75,4 @@ const Home = () => {
       <AssistantChatbot />
     </Layout>
   );
-};
-
-export default Home;
+}

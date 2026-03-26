@@ -1,6 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import api from '../services/api';
-import { storage } from '../utils/storage';
 
 export const AuthContext = createContext();
 
@@ -15,8 +14,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = storage.getItem('token');
-    const storedUser = storage.getItem('user');
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
     if (token && storedUser) {
       api.defaults.headers.Authorization = `Bearer ${token}`;
       setUser(JSON.parse(storedUser));
@@ -25,15 +24,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (token, userData) => {
-    storage.setItem('token', token);
-    storage.setItem('user', JSON.stringify(userData));
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(userData));
     api.defaults.headers.Authorization = `Bearer ${token}`;
     setUser(userData);
   };
 
   const logout = () => {
-    storage.removeItem('token');
-    storage.removeItem('user');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     delete api.defaults.headers.Authorization;
     setUser(null);
   };

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Layout from '../components/Layout';
 import {
@@ -13,7 +14,7 @@ import {
   PointElement,
   LineElement,
   ArcElement,
-  Filler // <-- IMPORTANT : plugin Filler
+  Filler
 } from 'chart.js';
 import { Bar, Line, Pie } from 'react-chartjs-2';
 
@@ -27,11 +28,12 @@ ChartJS.register(
   PointElement,
   LineElement,
   ArcElement,
-  Filler // <-- enregistrement du plugin Filler
+  Filler
 );
 
 const Statistics = () => {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [period, setPeriod] = useState('daily');
   const [temporalData, setTemporalData] = useState({ labels: [], counts: [] });
   const [categories, setCategories] = useState([]);
@@ -63,6 +65,12 @@ const Statistics = () => {
       setGeneralStats(generalRes.data);
     } catch (err) {
       console.error('Erreur chargement stats:', err);
+      if (err.response?.status === 401) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        navigate('/login');
+        return;
+      }
       setError(err.message);
     } finally {
       setLoading(false);
@@ -177,7 +185,7 @@ const Statistics = () => {
               <th>{t('reports.city')}</th>
               <th>{t('statistics.interactions')}</th>
               <th>%</th>
-            </tr>
+             </tr>
           </thead>
           <tbody>
             {topReports.map(r => (

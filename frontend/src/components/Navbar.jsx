@@ -18,7 +18,7 @@ const Navbar = () => {
   useEffect(() => {
     if (!user) return;
     fetchUnreadCount();
-    const socket = io(process.env.REACT_APP_SOCKET_URL || 'http://localhost:5000');
+    const socket = io(process.env.REACT_APP_SOCKET_URL || 'https://denonciation.onrender.com');
     socket.on('new_notification', () => fetchUnreadCount());
     return () => socket.disconnect();
   }, [user]);
@@ -40,7 +40,7 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="logo" onClick={() => navigate('/')}>
-        <img src="/logo.png" alt="Dénonciation" className="navbar-logo" />
+        <img src="/logo.png" alt="Dénonciation" />
       </div>
       <button className="mobile-menu-btn" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
       <div className={`nav-links ${menuOpen ? 'open' : ''}`}>
