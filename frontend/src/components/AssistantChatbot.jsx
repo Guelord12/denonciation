@@ -16,7 +16,10 @@ const AssistantChatbot = () => {
     setError('');
     setAnswer('');
     try {
-      const response = await api.post('/assistant/ask', { question, language: i18n.language });
+      const response = await api.post('/assistant/ask', {
+        question,
+        language: i18n.language // envoie la langue actuelle
+      });
       setAnswer(response.data.answer);
     } catch (err) {
       setError(t('assistant.unavailable'));

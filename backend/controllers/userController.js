@@ -68,6 +68,18 @@ class UserController {
             res.status(500).json({ error: 'Erreur serveur' });
         }
     }
+
+    async addPushToken(req, res) {
+        try {
+            const { token } = req.body;
+            if (!token) return res.status(400).json({ error: 'Token requis' });
+            const updated = await User.update(req.user.id, { push_token: token });
+            res.json({ success: true, message: 'Token push enregistré' });
+        } catch (err) {
+            console.error('Erreur enregistrement token push:', err);
+            res.status(500).json({ error: 'Erreur lors de l\'enregistrement' });
+        }
+    }
 }
 
 module.exports = new UserController();

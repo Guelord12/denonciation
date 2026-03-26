@@ -8,4 +8,10 @@ router.get('/', authMiddleware, notificationController.getNotifications.bind(not
 router.put('/:id/read', authMiddleware, notificationController.markAsRead.bind(notificationController));
 router.put('/read-all', authMiddleware, notificationController.markAllAsRead.bind(notificationController));
 
+// Route compteur
+router.get('/unread-count', authMiddleware, async (req, res) => {
+    const count = await require('../models/Notification').countUnread(req.user.id);
+    res.json({ count });
+});
+
 module.exports = router;

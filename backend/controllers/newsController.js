@@ -1,7 +1,7 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-const NEWS_API_KEY = '151366b0e294440ab5502684bd8bd8a2';
+const NEWS_API_KEY = process.env.NEWS_API_KEY || '151366b0e294440ab5502684bd8bd8a2';
 
 class NewsController {
     constructor() {
@@ -19,9 +19,62 @@ class NewsController {
         };
     }
 
+    async fetchFromNewsAPI(region, category, limit = 20) {
+        try {
+            let url;
+            const apiKey = NEWS_API_KEY;
+            // Map regions to country codes or topics for NewsAPI
+            const regionMap = {
+                'RDC': 'cd',
+                'Afrique': 'africa',
+                'MONDE': 'world'
+            };
+            const country = regionMap[region];
+            // Map categories to NewsAPI category strings
+            const categoryMap = {
+                'politique': 'politics',
+                'sportif': 'sports',
+                'économique': 'business',
+                'sécuritaire': 'security',
+                'emplois': 'jobs',
+                'sanitaire': 'health'
+            };
+            const apiCategory = categoryMap[category] || 'general';
+            if (country === 'cd') {
+                url = `https://newsapi.org/v2/top-headlines?country=${country}&category=${apiCategory}&apiKey=${apiKey}`;
+            } else if (country === 'africa') {
+                // NewsAPI doesn't have continent-level, use 'za' for South Africa as representative
+                url = `https://newsapi.org/v2/top-headlines?country=za&category=${apiCategory}&apiKey=${apiKey}`;
+            } else {
+                // World: top headlines from major sources
+                url = `https://newsapi.org/v2/top-headlines?sources=bbc-news,cnn,reuters&category=${apiCategory}&apiKey=${apiKey}`;
+            }
+            const response = await axios.get(url);
+            if (response.data.status === 'ok') {
+                return response.data.articles.slice(0, limit).map(article => ({
+                    title: article.title,
+                    link: article.url,
+                    source: article.source.name,
+                    region: region,
+                    category: category,
+                    publishedAt: article.publishedAt,
+                    description: article.description,
+                    image: article.urlToImage
+                }));
+            }
+            return [];
+        } catch (err) {
+            console.error('NewsAPI error:', err.message);
+            return [];
+        }
+    }
+
     async scrapeSource(sourceName, sourceConfig) {
         try {
-            const { data } = await axios.get(sourceConfig.url, { timeout: 10000, headers: { 'User-Agent': 'Mozilla/5.0' } });
+            const { data } = await axios.get(sourceConfig.url, {
+                timeout: 10000,
+                headers: { 'User-Agent': 'Mozilla/5.0' }
+            });
             const $ = cheerio.load(data);
             const articles = [];
             $(sourceConfig.selector).each((i, elem) => {
@@ -40,7 +93,13 @@ class NewsController {
                         const baseUrl = sourceConfig.url.match(/https?:\/\/[^\/]+/)[0];
                         link = baseUrl + (link.startsWith('/') ? link : '/' + link);
                     }
-                    articles.push({ title, link, image: image || null, source: sourceName, region: sourceConfig.region });
+                    articles.push({
+                        title,
+                        link,
+                        image: image || null,
+                        source: sourceName,
+                        region: sourceConfig.region
+                    });
                 }
             });
             return articles;
@@ -52,17 +111,32 @@ class NewsController {
 
     async getNews(req, res) {
         try {
-            const { region = 'RDC', limit = 20 } = req.query;
-            const allArticles = [];
-            for (const [name, config] of Object.entries(this.scrapingSources)) {
-                if (region === config.region) {
-                    const articles = await this.scrapeSource(name, config);
-                    allArticles.push(...articles);
+            const { region = 'RDC', category = 'general', limit = 20 } = req.query;
+            let articles = [];
+
+            // Try NewsAPI first
+            const apiArticles = await this.fetchFromNewsAPI(region, category, limit);
+            if (apiArticles.length > 0) {
+                articles = apiArticles;
+            } else {
+                // Fallback to scraping
+                const sourcesToScrape = Object.entries(this.scrapingSources)
+                    .filter(([_, config]) => config.region === region);
+                for (const [name, config] of sourcesToScrape) {
+                    const scraped = await this.scrapeSource(name, config);
+                    articles.push(...scraped);
+                    if (articles.length >= limit) break;
                 }
-                if (allArticles.length >= limit) break;
             }
-            const shuffled = allArticles.sort(() => 0.5 - Math.random());
-            res.json(shuffled.slice(0, parseInt(limit)));
+
+            // If category is not 'general', filter (but NewsAPI already did)
+            if (category !== 'general' && articles.length > 0) {
+                // Articles from scraping may not have category, keep them
+                articles = articles;
+            }
+
+            const limited = articles.slice(0, parseInt(limit));
+            res.json(limited);
         } catch (err) {
             console.error('Erreur récupération actualités:', err);
             res.status(500).json({ error: 'Erreur lors de la récupération des actualités' });

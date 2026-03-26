@@ -29,6 +29,9 @@ class AssistantService {
             if (lower.includes('compte') || lower.includes('supprimer')) {
                 return "Pour supprimer votre compte, allez dans Paramètres > Supprimer mon compte. Cette action est irréversible et supprimera tous vos signalements, commentaires et interactions.";
             }
+            if (lower.includes('mot de passe') || lower.includes('mdp')) {
+                return "Si vous avez oublié votre mot de passe, utilisez l'option 'Mot de passe oublié' sur la page de connexion. Vous recevrez un email avec les instructions pour le réinitialiser.";
+            }
             return "Je suis l'assistant de la plateforme Dénonciation. Je peux vous aider à créer des signalements, comprendre le fonctionnement des lives, ou répondre à vos questions sur les règles d'utilisation. Quelle est votre question ?";
         } else {
             if (lower.includes('report') || lower.includes('how to report')) {
@@ -46,6 +49,9 @@ class AssistantService {
             if (lower.includes('account') || lower.includes('delete')) {
                 return "To delete your account, go to Settings > Delete my account. This action is irreversible and will delete all your reports, comments, and interactions.";
             }
+            if (lower.includes('password')) {
+                return "If you forgot your password, use the 'Forgot password' option on the login page. You will receive an email with instructions to reset it.";
+            }
             return "I am the assistant for the Denonciation platform. I can help you create reports, understand how live streams work, or answer your questions about the terms of use. What is your question?";
         }
     }
@@ -53,8 +59,21 @@ class AssistantService {
     async askOpenAI(question, language) {
         try {
             const systemMessage = language === 'fr'
-                ? `Tu es un assistant pour la plateforme "Dénonciation", une application de signalement d'abus. Réponds en français, de manière concise et utile.`
-                : `You are an assistant for the "Denonciation" platform, an abuse reporting application. Answer in English concisely and helpfully.`;
+                ? `Tu es un assistant pour la plateforme "Dénonciation", une application de signalement d'abus et de dénonciations. Tu aides les utilisateurs à:
+                - Créer des signalements d'abus (catégories: arrestation arbitraire, violence policière, corruption, discrimination, viol, vol, harcèlement, enlèvements, agressions, présence militaire illégale, attaque milicienne, attaque rebelle, etc.)
+                - Comprendre le système de likes, commentaires et témoignages
+                - Utiliser les fonctionnalités de live et chat
+                - Naviguer dans l'application
+                - Comprendre les règles de modération
+                Réponds de manière concise, utile et bienveillante. La plateforme est interdite aux moins de 15 ans. Réponds en français.`
+                : `You are an assistant for the "Denonciation" platform, an abuse reporting and denunciation application. You help users:
+                - Create abuse reports (categories: arbitrary arrest, police violence, corruption, discrimination, rape, theft, harassment, kidnapping, assaults, illegal military presence, militia attack, rebel attack, etc.)
+                - Understand the like, comment, and witness system
+                - Use live streaming and chat features
+                - Navigate the application
+                - Understand moderation rules
+                Answer concisely, helpfully, and kindly. The platform is forbidden to under-15s. Answer in English.`;
+
             const completion = await this.openai.chat.completions.create({
                 model: "gpt-3.5-turbo",
                 messages: [
@@ -73,10 +92,15 @@ class AssistantService {
 
     async ask(question, language = 'fr') {
         if (!question || question.trim().length < 3) {
-            return language === 'fr' ? "Veuillez poser une question plus précise pour que je puisse vous aider." : "Please ask a more specific question so I can help you.";
+            return language === 'fr'
+                ? "Veuillez poser une question plus précise pour que je puisse vous aider."
+                : "Please ask a more specific question so I can help you.";
         }
-        if (this.openai) return await this.askOpenAI(question, language);
-        else return this.getFallbackAnswer(question, language);
+        if (this.openai) {
+            return await this.askOpenAI(question, language);
+        } else {
+            return this.getFallbackAnswer(question, language);
+        }
     }
 }
 
