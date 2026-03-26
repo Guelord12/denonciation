@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  SafeAreaView, // ajout
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { reportsService } from '../services/reports';
@@ -55,14 +56,14 @@ export default function HomeScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color="#e63946" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.livesContainer}>
         <Text style={styles.sectionTitle}>🎥 {t('live.activeLives')}</Text>
         {lives.length > 0 ? (
@@ -89,7 +90,7 @@ export default function HomeScreen({ navigation }) {
       />
 
       <AssistantChatbot />
-    </View>
+    </SafeAreaView>
   );
 }
 

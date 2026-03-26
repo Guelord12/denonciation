@@ -6,7 +6,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Dimensions,
-  TouchableOpacity, // Import manquant
+  TouchableOpacity,
+  SafeAreaView, // ajout
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
@@ -55,17 +56,17 @@ export default function StatisticsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color="#e63946" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={styles.center}>
         <Text style={styles.error}>{error}</Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -87,82 +88,84 @@ export default function StatisticsScreen() {
   }));
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>{t('statistics.title')}</Text>
+    <SafeAreaView style={styles.container}>
+      <ScrollView>
+        <Text style={styles.title}>{t('statistics.title')}</Text>
 
-      <View style={styles.statsCards}>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('statistics.totalReports')}</Text>
-          <Text style={styles.cardValue}>{generalStats?.totalReports || 0}</Text>
+        <View style={styles.statsCards}>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t('statistics.totalReports')}</Text>
+            <Text style={styles.cardValue}>{generalStats?.totalReports || 0}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t('statistics.totalUsers')}</Text>
+            <Text style={styles.cardValue}>{generalStats?.totalUsers || 0}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t('statistics.totalLikes')}</Text>
+            <Text style={styles.cardValue}>{generalStats?.totalLikes || 0}</Text>
+          </View>
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>{t('statistics.totalWitnesses')}</Text>
+            <Text style={styles.cardValue}>{generalStats?.totalWitnesses || 0}</Text>
+          </View>
         </View>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('statistics.totalUsers')}</Text>
-          <Text style={styles.cardValue}>{generalStats?.totalUsers || 0}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('statistics.totalLikes')}</Text>
-          <Text style={styles.cardValue}>{generalStats?.totalLikes || 0}</Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t('statistics.totalWitnesses')}</Text>
-          <Text style={styles.cardValue}>{generalStats?.totalWitnesses || 0}</Text>
-        </View>
-      </View>
 
-      <View style={styles.periodSelector}>
-        {['daily', 'weekly', 'monthly', 'quarterly', 'semester', 'yearly'].map(p => (
-          <TouchableOpacity
-            key={p}
-            style={[styles.periodBtn, period === p && styles.activePeriod]}
-            onPress={() => setPeriod(p)}
-          >
-            <Text style={styles.periodText}>{t(`statistics.${p}`)}</Text>
-          </TouchableOpacity>
+        <View style={styles.periodSelector}>
+          {['daily', 'weekly', 'monthly', 'quarterly', 'semester', 'yearly'].map(p => (
+            <TouchableOpacity
+              key={p}
+              style={[styles.periodBtn, period === p && styles.activePeriod]}
+              onPress={() => setPeriod(p)}
+            >
+              <Text style={styles.periodText}>{t(`statistics.${p}`)}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <Text style={styles.subtitle}>{t('statistics.evolution')}</Text>
+        <LineChart
+          data={lineData}
+          width={screenWidth - 32}
+          height={220}
+          chartConfig={chartConfig}
+          style={styles.chart}
+        />
+
+        <Text style={styles.subtitle}>{t('statistics.byCategory')}</Text>
+        <BarChart
+          data={barData}
+          width={screenWidth - 32}
+          height={220}
+          chartConfig={chartConfig}
+          style={styles.chart}
+        />
+
+        <Text style={styles.subtitle}>{t('statistics.categoryDistribution')}</Text>
+        <PieChart
+          data={pieData}
+          width={screenWidth - 32}
+          height={220}
+          chartConfig={chartConfig}
+          accessor="population"
+          backgroundColor="transparent"
+          paddingLeft="15"
+        />
+
+        <Text style={styles.subtitle}>{t('statistics.topReports')}</Text>
+        {topReports.map(r => (
+          <View key={r.id} style={styles.topItem}>
+            <Text>{r.titre}</Text>
+            <Text>{r.total_interactions} interactions ({r.percent}%)</Text>
+          </View>
         ))}
-      </View>
 
-      <Text style={styles.subtitle}>{t('statistics.evolution')}</Text>
-      <LineChart
-        data={lineData}
-        width={screenWidth - 32}
-        height={220}
-        chartConfig={chartConfig}
-        style={styles.chart}
-      />
-
-      <Text style={styles.subtitle}>{t('statistics.byCategory')}</Text>
-      <BarChart
-        data={barData}
-        width={screenWidth - 32}
-        height={220}
-        chartConfig={chartConfig}
-        style={styles.chart}
-      />
-
-      <Text style={styles.subtitle}>{t('statistics.categoryDistribution')}</Text>
-      <PieChart
-        data={pieData}
-        width={screenWidth - 32}
-        height={220}
-        chartConfig={chartConfig}
-        accessor="population"
-        backgroundColor="transparent"
-        paddingLeft="15"
-      />
-
-      <Text style={styles.subtitle}>{t('statistics.topReports')}</Text>
-      {topReports.map(r => (
-        <View key={r.id} style={styles.topItem}>
-          <Text>{r.titre}</Text>
-          <Text>{r.total_interactions} interactions ({r.percent}%)</Text>
-        </View>
-      ))}
-
-      <Text style={styles.subtitle}>{t('statistics.topCities')}</Text>
-      {cityStats.map(c => (
-        <Text key={c.ville_signalement}>{c.ville_signalement}: {c.count} signalements</Text>
-      ))}
-    </ScrollView>
+        <Text style={styles.subtitle}>{t('statistics.topCities')}</Text>
+        {cityStats.map(c => (
+          <Text key={c.ville_signalement}>{c.ville_signalement}: {c.count} signalements</Text>
+        ))}
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -177,19 +180,19 @@ const chartConfig = {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', padding: 16 },
-  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, color: '#e63946' },
-  statsCards: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16 },
+  container: { flex: 1, backgroundColor: '#fff' },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 16, color: '#e63946', paddingHorizontal: 16 },
+  statsCards: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 16 },
   card: { width: '48%', backgroundColor: '#f8f9fa', padding: 12, borderRadius: 8, marginBottom: 8 },
   cardTitle: { fontSize: 14, color: '#666' },
   cardValue: { fontSize: 24, fontWeight: 'bold', marginTop: 4 },
-  periodSelector: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 },
+  periodSelector: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginBottom: 16 },
   periodBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: '#f0f0f0', marginRight: 8, marginBottom: 8 },
   activePeriod: { backgroundColor: '#e63946' },
   periodText: { color: '#333' },
-  subtitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 12 },
-  chart: { marginVertical: 8, borderRadius: 16 },
-  topItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  subtitle: { fontSize: 18, fontWeight: 'bold', marginVertical: 12, paddingHorizontal: 16 },
+  chart: { marginVertical: 8, alignSelf: 'center' },
+  topItem: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#eee' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   error: { color: '#dc3545' },
 });

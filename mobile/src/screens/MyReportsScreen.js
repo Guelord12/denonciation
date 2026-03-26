@@ -4,9 +4,9 @@ import {
   Text,
   FlatList,
   StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
-  RefreshControl, // <-- IMPORT AJOUTÉ
+  RefreshControl,
+  SafeAreaView, // ajout
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { reportsService } from '../services/reports';
@@ -41,14 +41,14 @@ export default function MyReportsScreen({ navigation }) {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color="#e63946" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <FlatList
         data={reports}
         keyExtractor={item => item.id.toString()}
@@ -58,7 +58,7 @@ export default function MyReportsScreen({ navigation }) {
         }
         ListEmptyComponent={<Text style={styles.empty}>{t('reports.noReports')}</Text>}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

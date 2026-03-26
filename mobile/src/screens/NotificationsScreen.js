@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import api from '../api/client';
 import { useNavigation } from '@react-navigation/native';
@@ -100,14 +100,14 @@ export default function NotificationsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color="#e63946" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('notifications.title')}</Text>
         {notifications.length > 0 && (
@@ -125,7 +125,7 @@ export default function NotificationsScreen() {
           renderItem={renderItem}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

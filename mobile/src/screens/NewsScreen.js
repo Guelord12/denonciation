@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Linking,
+  SafeAreaView,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import api from '../api/client';
@@ -50,14 +51,14 @@ export default function NewsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
+      <SafeAreaView style={styles.center}>
         <ActivityIndicator size="large" color="#e63946" />
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('news.title')}</Text>
         <View style={styles.filterRow}>
@@ -80,7 +81,7 @@ export default function NewsScreen() {
       ) : (
         <FlatList data={articles} keyExtractor={(item, idx) => idx.toString()} renderItem={renderItem} />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

@@ -1,3 +1,4 @@
+// mobile/src/screens/RegisterScreen.js
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -10,8 +11,10 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  FlatList,
+  SafeAreaView,
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
 import { useTranslation } from 'react-i18next';
 import api from '../api/client';
 import { getCurrentCity } from '../utils/geolocation';
@@ -105,7 +108,7 @@ const phoneCodes = [
   "+993", "+994", "+995", "+996", "+998"
 ];
 
-// Composant Input avec label flottant
+// Composant de champ avec label flottant
 const FloatingLabelInput = ({ label, value, onChangeText, secureTextEntry, keyboardType, error, ...props }) => {
   const [focused, setFocused] = useState(false);
   const hasValue = value && value.trim() !== '';
@@ -131,32 +134,75 @@ const FloatingLabelInput = ({ label, value, onChangeText, secureTextEntry, keybo
   );
 };
 
-// Composant Select avec label flottant
-const FloatingSelect = ({ label, selectedValue, onValueChange, items, error }) => {
-  const [focused, setFocused] = useState(false);
+// Composant SearchablePicker : affiche un champ qui ouvre une modale avec recherche
+const SearchablePicker = ({ label, selectedValue, onSelect, items, error }) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [filteredItems, setFilteredItems] = useState(items);
+
+  useEffect(() => {
+    setFilteredItems(
+      items.filter(item => item.label.toLowerCase().includes(searchText.toLowerCase()))
+    );
+  }, [searchText, items]);
+
+  const handleSelect = (value) => {
+    onSelect(value);
+    setModalVisible(false);
+    setSearchText('');
+  };
+
   const hasValue = selectedValue && selectedValue !== '';
-  const isActive = focused || hasValue;
+  const displayValue = items.find(i => i.value === selectedValue)?.label || '';
 
   return (
     <View style={styles.inputContainer}>
-      <View style={[styles.pickerWrapper, error && styles.inputError]}>
-        <Picker
-          selectedValue={selectedValue}
-          onValueChange={onValueChange}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          style={styles.picker}
-        >
-          <Picker.Item label="" value="" />
-          {items.map(item => (
-            <Picker.Item key={item.value} label={item.label} value={item.value} />
-          ))}
-        </Picker>
-      </View>
-      <Text style={[styles.floatingLabel, isActive && styles.floatingLabelActive]}>
+      <TouchableOpacity
+        style={[styles.input, styles.pickerInput, error && styles.inputError]}
+        onPress={() => setModalVisible(true)}
+      >
+        <Text style={[styles.pickerText, !hasValue && styles.placeholderText]}>
+          {hasValue ? displayValue : label}
+        </Text>
+      </TouchableOpacity>
+      <Text style={[styles.floatingLabel, hasValue && styles.floatingLabelActive]}>
         {label}
       </Text>
       {error && <Text style={styles.fieldError}>{error}</Text>}
+
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Sélectionnez {label}</Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}>
+                <Text style={styles.modalClose}>✖</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Rechercher..."
+              value={searchText}
+              onChangeText={setSearchText}
+            />
+            <FlatList
+              data={filteredItems}
+              keyExtractor={(item) => item.value}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.modalItem} onPress={() => handleSelect(item.value)}>
+                  <Text>{item.label}</Text>
+                </TouchableOpacity>
+              )}
+              keyboardShouldPersistTaps="handled"
+            />
+          </View>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 };
@@ -227,10 +273,8 @@ export default function RegisterScreen({ navigation }) {
     try {
       await api.post('/auth/register', formData);
       Alert.alert('Succès', 'Inscription réussie. Connectez-vous maintenant.');
-      // Redirection vers l'écran de connexion
       navigation.navigate('Login');
     } catch (err) {
-      console.log('Erreur inscription:', err);
       if (err.response) {
         const data = err.response.data;
         if (typeof data === 'string') {
@@ -241,7 +285,7 @@ export default function RegisterScreen({ navigation }) {
           setApiError(`Erreur ${err.response.status}: ${JSON.stringify(data)}`);
         }
       } else if (err.request) {
-        setApiError('Impossible de contacter le serveur. Vérifiez votre connexion.');
+        setApiError('Impossible de contacter le serveur.');
       } else {
         setApiError(t('errors.generic'));
       }
@@ -292,10 +336,10 @@ export default function RegisterScreen({ navigation }) {
           />
           <Text style={styles.ageWarning}>{t('register.ageWarning')}</Text>
 
-          <FloatingSelect
+          <SearchablePicker
             label="Pays de résidence *"
             selectedValue={formData.pays_residence}
-            onValueChange={value => handleChange('pays_residence', value)}
+            onSelect={value => handleChange('pays_residence', value)}
             items={countryItems}
             error={errors.pays_residence}
           />
@@ -307,25 +351,22 @@ export default function RegisterScreen({ navigation }) {
             error={errors.ville_residence}
           />
 
-          <FloatingSelect
+          <SearchablePicker
             label="Nationalité *"
             selectedValue={formData.nationalite}
-            onValueChange={value => handleChange('nationalite', value)}
+            onSelect={value => handleChange('nationalite', value)}
             items={nationalityItems}
             error={errors.nationalite}
           />
 
           <View style={styles.phoneRow}>
             <View style={styles.codePicker}>
-              <Picker
+              <SearchablePicker
+                label="Indicatif"
                 selectedValue={formData.indicatif_telephone}
-                onValueChange={value => handleChange('indicatif_telephone', value)}
-                style={styles.pickerSmall}
-              >
-                {phoneCodeItems.map(item => (
-                  <Picker.Item key={item.value} label={item.label} value={item.value} />
-                ))}
-              </Picker>
+                onSelect={value => handleChange('indicatif_telephone', value)}
+                items={phoneCodeItems}
+              />
             </View>
             <View style={styles.phoneInput}>
               <FloatingLabelInput
@@ -400,6 +441,7 @@ export default function RegisterScreen({ navigation }) {
   );
 }
 
+// Styles (ajoutez les nouvelles règles pour la modale et les ajustements responsives)
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   scrollContainer: { flexGrow: 1, justifyContent: 'center', paddingVertical: 20 },
@@ -407,17 +449,17 @@ const styles = StyleSheet.create({
   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, textAlign: 'center', color: '#e63946' },
   inputContainer: { marginBottom: 16, position: 'relative' },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, paddingTop: 12, paddingBottom: 8, paddingHorizontal: 12, fontSize: 16, backgroundColor: '#fff' },
+  pickerInput: { justifyContent: 'center', paddingVertical: 12 },
+  pickerText: { fontSize: 16, color: '#333' },
+  placeholderText: { color: '#666' },
   inputError: { borderColor: '#dc3545' },
   floatingLabel: { position: 'absolute', left: 12, top: 12, fontSize: 16, color: '#666', backgroundColor: '#fff', paddingHorizontal: 4 },
   floatingLabelActive: { top: -8, fontSize: 12, color: '#e63946' },
   fieldError: { color: '#dc3545', fontSize: 12, marginTop: 4, marginLeft: 4 },
   apiError: { color: '#dc3545', marginBottom: 12, textAlign: 'center' },
   ageWarning: { fontSize: 12, color: '#666', marginBottom: 8, marginTop: -8 },
-  pickerWrapper: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, backgroundColor: '#fff', height: 48, justifyContent: 'center' },
-  picker: { height: 48 },
-  pickerSmall: { height: 48, width: 100 },
   phoneRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
-  codePicker: { width: 100, marginRight: 8, borderWidth: 1, borderColor: '#ddd', borderRadius: 8, overflow: 'hidden' },
+  codePicker: { width: 100, marginRight: 8 },
   phoneInput: { flex: 1 },
   passwordContainer: { position: 'relative', marginBottom: 16 },
   eye: { position: 'absolute', right: 12, top: 12, zIndex: 1 },
@@ -428,4 +470,12 @@ const styles = StyleSheet.create({
   link: { color: '#e63946', textDecorationLine: 'underline' },
   button: { backgroundColor: '#e63946', padding: 12, borderRadius: 8, alignItems: 'center', marginTop: 12 },
   buttonText: { color: '#fff', fontWeight: 'bold' },
+  // Styles pour la modale
+  modalContainer: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 16, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  modalTitle: { fontSize: 18, fontWeight: 'bold' },
+  modalClose: { fontSize: 20, color: '#666' },
+  searchInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 8, padding: 10, marginBottom: 12 },
+  modalItem: { paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
 });
