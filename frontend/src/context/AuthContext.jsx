@@ -15,25 +15,21 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
 
   useEffect(() => {
-    if (token) {
-      api.defaults.headers.Authorization = `Bearer ${token}`;
-      fetchUser();
-    } else {
+    const loadUser = async () => {
+      if (token) {
+        api.defaults.headers.Authorization = `Bearer ${token}`;
+        try {
+          const response = await api.get('/users/me');
+          setUser(response.data);
+        } catch (err) {
+          console.error('Erreur récupération utilisateur:', err);
+          logout();
+        }
+      }
       setLoading(false);
-    }
+    };
+    loadUser();
   }, [token]);
-
-  const fetchUser = async () => {
-    try {
-      const response = await api.get('/users/me');
-      setUser(response.data);
-    } catch (err) {
-      console.error('Erreur récupération utilisateur:', err);
-      logout();
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const login = (newToken, userData) => {
     localStorage.setItem('token', newToken);
