@@ -35,7 +35,15 @@ const Login = () => {
       login(response.token, response.user);
       navigate('/');
     } catch (err) {
-      setApiError(err.response?.data?.error || t('errors.generic'));
+      console.error('Erreur de connexion:', err);
+      let errorMessage = t('errors.generic');
+      if (err.response) {
+        // Le serveur a répondu avec un statut d'erreur
+        errorMessage = err.response.data?.error || `Erreur ${err.response.status}: ${err.response.statusText}`;
+      } else if (err.request) {
+        errorMessage = 'Impossible de contacter le serveur. Vérifiez votre connexion.';
+      }
+      setApiError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -73,7 +81,12 @@ const Login = () => {
               autoComplete="current-password"
               className={errors.password ? 'input-error' : ''}
             />
-            <button type="button" onClick={() => setShowPassword(!showPassword)} className="password-toggle" style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', width: 'auto', background: 'none', padding: '0.25rem' }}>
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="password-toggle"
+              style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', width: 'auto', background: 'none', padding: '0.25rem' }}
+            >
               {showPassword ? '🙈' : '👁️'}
             </button>
           </div>
