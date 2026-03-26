@@ -40,7 +40,7 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="logo" onClick={() => navigate('/')}>
-        <img src="/logo.png" alt="Dénonciation" />
+        <img src="/logo.png" alt="Dénonciation" className="navbar-logo" />
       </div>
       <button className="mobile-menu-btn" onClick={() => setMenuOpen(!menuOpen)}>☰</button>
       <div className={`nav-links ${menuOpen ? 'open' : ''}`}>
