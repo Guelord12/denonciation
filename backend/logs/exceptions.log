@@ -1,0 +1,292 @@
+2026-04-09 13:06:03:63 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+2026-04-09 13:07:32:732 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+2026-04-09 13:08:03:83 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+2026-04-09 13:09:12:912 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+2026-04-09 13:09:57:957 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+2026-04-09 13:14:12:1412 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+2026-04-09 13:15:52:1552 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+2026-04-09 13:18:48:1848 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+2026-04-09 13:36:10:3610 [31merror[39m: [31muncaughtException: Cannot find module 'rate-limit-redis'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts[39m
+[31m- C:\Users\user\denonciation\backend\src\index.ts[39m
+[31mError: Cannot find module 'rate-limit-redis'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts[39m
+[31m- C:\Users\user\denonciation\backend\src\index.ts[39m
+[31m    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)[39m
+[31m    at Function.Module._resolveFilename.sharedData.moduleResolveFilenameHook.installedValue [as _resolveFilename] (C:\Users\user\denonciation\backend\node_modules\@cspotcode\source-map-support\source-map-support.js:811:30)[39m
+[31m    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)[39m
+[31m    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1192:37)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+[31m    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1463:12)[39m
+[31m    at require (node:internal/modules/helpers:147:16)[39m
+[31m    at Object.<anonymous> (C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts:3:1)[39m
+2026-04-09 13:51:41:5141 [31merror[39m: [31muncaughtException: Cannot find module 'rate-limit-redis'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts[39m
+[31m- C:\Users\user\denonciation\backend\src\index.ts[39m
+[31mError: Cannot find module 'rate-limit-redis'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts[39m
+[31m- C:\Users\user\denonciation\backend\src\index.ts[39m
+[31m    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)[39m
+[31m    at Function.Module._resolveFilename.sharedData.moduleResolveFilenameHook.installedValue [as _resolveFilename] (C:\Users\user\denonciation\backend\node_modules\@cspotcode\source-map-support\source-map-support.js:811:30)[39m
+[31m    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)[39m
+[31m    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1192:37)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+[31m    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1463:12)[39m
+[31m    at require (node:internal/modules/helpers:147:16)[39m
+[31m    at Object.<anonymous> (C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts:3:1)[39m
+2026-04-09 13:53:02:532 [31merror[39m: [31muncaughtException: Cannot find module 'rate-limit-redis'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts[39m
+[31m- C:\Users\user\denonciation\backend\src\index.ts[39m
+[31mError: Cannot find module 'rate-limit-redis'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts[39m
+[31m- C:\Users\user\denonciation\backend\src\index.ts[39m
+[31m    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)[39m
+[31m    at Function.Module._resolveFilename.sharedData.moduleResolveFilenameHook.installedValue [as _resolveFilename] (C:\Users\user\denonciation\backend\node_modules\@cspotcode\source-map-support\source-map-support.js:811:30)[39m
+[31m    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)[39m
+[31m    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1192:37)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+[31m    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1463:12)[39m
+[31m    at require (node:internal/modules/helpers:147:16)[39m
+[31m    at Object.<anonymous> (C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts:3:1)[39m
+2026-04-09 13:53:25:5325 [31merror[39m: [31muncaughtException: Cannot find module 'rate-limit-redis'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts[39m
+[31m- C:\Users\user\denonciation\backend\src\index.ts[39m
+[31mError: Cannot find module 'rate-limit-redis'[39m
+[31mRequire stack:[39m
+[31m- C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts[39m
+[31m- C:\Users\user\denonciation\backend\src\index.ts[39m
+[31m    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)[39m
+[31m    at Function.Module._resolveFilename.sharedData.moduleResolveFilenameHook.installedValue [as _resolveFilename] (C:\Users\user\denonciation\backend\node_modules\@cspotcode\source-map-support\source-map-support.js:811:30)[39m
+[31m    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)[39m
+[31m    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1192:37)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+[31m    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)[39m
+[31m    at Module.require (node:internal/modules/cjs/loader:1463:12)[39m
+[31m    at require (node:internal/modules/helpers:147:16)[39m
+[31m    at Object.<anonymous> (C:\Users\user\denonciation\backend\src\middleware\rateLimiter.ts:3:1)[39m
+2026-04-09 13:56:48:5648 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
+2026-04-09 13:57:51:5751 [31merror[39m: [31muncaughtException: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31mTSError: ⨯ Unable to compile TypeScript:[39m
+[31m[96msrc/middleware/rateLimiter.ts[0m:[93m3[0m:[93m24[0m - [91merror[0m[90m TS2307: [0mCannot find module 'rate-limit-redis' or its corresponding type declarations.[39m
+
+[31m[7m3[0m import RedisStore from 'rate-limit-redis';[39m
+[31m[7m [0m [91m                       ~~~~~~~~~~~~~~~~~~[0m[39m
+
+[31m    at createTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:859:12)[39m
+[31m    at reportTSError (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:863:19)[39m
+[31m    at getOutput (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1077:36)[39m
+[31m    at Object.compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1433:41)[39m
+[31m    at Module.m._compile (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1617:30)[39m
+[31m    at node:internal/modules/cjs/loader:1839:10[39m
+[31m    at Object.require.extensions.<computed> [as .ts] (C:\Users\user\denonciation\backend\node_modules\ts-node\src\index.ts:1621:12)[39m
+[31m    at Module.load (node:internal/modules/cjs/loader:1441:32)[39m
+[31m    at Function._load (node:internal/modules/cjs/loader:1263:12)[39m
+[31m    at TracingChannel.traceSync (node:diagnostics_channel:322:14)[39m
