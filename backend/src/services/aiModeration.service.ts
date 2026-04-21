@@ -4,6 +4,7 @@ import axios from 'axios';
 import sharp from 'sharp';
 import { createHash } from 'crypto';
 import { redisClient } from '../config/redis';
+import { getGeocodingService } from './geocoding.service';
 
 // =====================================================
 // TYPES ET INTERFACES
@@ -284,17 +285,16 @@ export class ModerationService {
    */
   public async moderateReport(reportId: number): Promise<ModerationResult> {
     try {
-      // Récupérer le signalement avec plus de détails
+      // Récupérer le signalement avec plus de détails - SANS trust_score
       const reportResult = await query(
         `SELECT r.*, 
                 c.name as category_name,
                 u.username,
-                u.trust_score,
-                (SELECT COUNT(*) FROM reports WHERE user_id = r.user_id) as user_report_count,
-                (SELECT COUNT(*) FROM reports WHERE user_id = r.user_id AND status = 'approved') as user_approved_count
+                (SELECT COUNT(*) FROM reports WHERE reporter_id = r.reporter_id) as user_report_count,
+                (SELECT COUNT(*) FROM reports WHERE reporter_id = r.reporter_id AND status = 'approved') as user_approved_count
          FROM reports r 
          LEFT JOIN categories c ON r.category_id = c.id 
-         LEFT JOIN users u ON r.user_id = u.id
+         LEFT JOIN users u ON r.reporter_id = u.id
          WHERE r.id = $1`,
         [reportId]
       );
@@ -476,8 +476,8 @@ export class ModerationService {
 
     // Vérifier le type de média
     const mediaPath = report.media_path;
-    const isVideo = mediaPath.match(/\.(mp4|mov|avi|webm|mkv)$/i);
-    const isImage = mediaPath.match(/\.(jpg|jpeg|png|gif|webp)$/i);
+    const isVideo = mediaPath && mediaPath.match(/\.(mp4|mov|avi|webm|mkv)$/i);
+    const isImage = mediaPath && mediaPath.match(/\.(jpg|jpeg|png|gif|webp)$/i);
 
     if (isVideo) {
       result.score += 5;
@@ -513,14 +513,15 @@ export class ModerationService {
    * Analyse l'historique utilisateur
    */
   private async analyzeUserHistory(report: any, result: ModerationResult): Promise<void> {
+    // Utiliser reporter_id, SANS trust_score
     const userStats = await query(
       `SELECT 
         COUNT(*) as total_reports,
         COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved_reports,
         COUNT(CASE WHEN status = 'rejected' THEN 1 END) as rejected_reports,
         AVG(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approval_rate
-       FROM reports WHERE user_id = $1`,
-      [report.user_id]
+       FROM reports WHERE reporter_id = $1`,
+      [report.reporter_id]
     );
 
     const stats = userStats.rows[0];
@@ -548,15 +549,17 @@ export class ModerationService {
       result.reasons.push('Utilisateur fiable (5+ signalements approuvés)');
     }
 
-    // Vérifier le trust score de l'utilisateur
-    if (report.trust_score) {
-      result.score += report.trust_score / 10;
-    }
+    // Calculer le trust score à partir de l'historique
+    const calculatedTrustScore = stats.total_reports > 0 
+      ? Math.min(100, Math.round((stats.approved_reports / stats.total_reports) * 100))
+      : 50;
+    
+    result.score += calculatedTrustScore / 20; // Max 5 points
 
     // Vérifier l'âge du compte
     const accountAge = await query(
       `SELECT created_at FROM users WHERE id = $1`,
-      [report.user_id]
+      [report.reporter_id]
     );
 
     if (accountAge.rows.length > 0) {
@@ -583,8 +586,8 @@ export class ModerationService {
     // Vérifier les signalements récents du même utilisateur
     const recentReports = await query(
       `SELECT COUNT(*) as count FROM reports 
-       WHERE user_id = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
-      [report.user_id]
+       WHERE reporter_id = $1 AND created_at > NOW() - INTERVAL '1 hour'`,
+      [report.reporter_id]
     );
 
     const recentCount = parseInt(recentReports.rows[0].count);
@@ -601,12 +604,12 @@ export class ModerationService {
     // Vérifier les doublons de contenu
     const similarReports = await query(
       `SELECT COUNT(*) as count FROM reports 
-       WHERE user_id = $1 AND (
+       WHERE reporter_id = $1 AND (
          title ILIKE $2 OR 
          description ILIKE $3
        ) AND created_at > NOW() - INTERVAL '24 hours'`,
       [
-        report.user_id,
+        report.reporter_id,
         `%${report.title.substring(0, 30)}%`,
         `%${report.description?.substring(0, 30)}%`
       ]
@@ -671,15 +674,102 @@ export class ModerationService {
   }
 
   /**
-   * Analyse la localisation
+   * Analyse la localisation avec géocodage inverse
    */
   private async analyzeLocation(report: any, result: ModerationResult): Promise<void> {
     if (report.latitude && report.longitude) {
+      // ✅ CORRECTION : Convertir les coordonnées en nombres flottants
+      const lat = typeof report.latitude === 'string' 
+        ? parseFloat(report.latitude) 
+        : report.latitude;
+      const lng = typeof report.longitude === 'string' 
+        ? parseFloat(report.longitude) 
+        : report.longitude;
+
+      // Vérifier que les coordonnées sont valides
+      if (isNaN(lat) || isNaN(lng)) {
+        result.score -= 5;
+        result.flags.push('invalid_coordinates');
+        result.reasons.push('Coordonnées GPS invalides');
+        return;
+      }
+
+      // Vérifier que les coordonnées sont dans les plages valides
+      if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+        result.score -= 10;
+        result.flags.push('out_of_bounds_coordinates');
+        result.reasons.push('Coordonnées GPS hors limites');
+        return;
+      }
+
       result.score += 8;
       result.reasons.push('Localisation précise fournie');
 
-      // Vérifier si la localisation est cohérente avec le contenu
-      // (à implémenter avec une API de géocodage inverse)
+      try {
+        const geocodingService = getGeocodingService();
+        const content = `${report.title} ${report.description || ''}`;
+        
+        const validationResult = await geocodingService.validateLocationWithContent(
+          lat,
+          lng,
+          content
+        );
+
+        if (validationResult.location) {
+          const loc = validationResult.location;
+          result.reasons.push(`Lieu détecté: ${loc.displayName}`);
+          
+          // Ajouter des points selon la précision
+          if (loc.city) {
+            result.score += 2;
+            result.reasons.push(`Ville identifiée: ${loc.city}`);
+          }
+          
+          if (loc.country) {
+            result.score += 1;
+            result.reasons.push(`Pays identifié: ${loc.country}`);
+          }
+
+          // Vérifier la cohérence avec le contenu
+          if (validationResult.isValid) {
+            result.score += 5;
+            result.reasons.push('Localisation cohérente avec le contenu');
+          } else {
+            result.score -= 10;
+            result.flags.push('inconsistent_location');
+            result.reasons.push(`Localisation incohérente: ${validationResult.issues.join(', ')}`);
+            
+            if (validationResult.suggestedLocation) {
+              result.reasons.push(`Ville suggérée: ${validationResult.suggestedLocation.displayName}`);
+            }
+          }
+
+          // Vérifications supplémentaires
+          if (validationResult.issues.includes('Les coordonnées pointent vers l\'océan')) {
+            result.score -= 20;
+            result.flags.push('ocean_location');
+            result.reasons.push('Coordonnées dans l\'océan - signalement suspect');
+          }
+
+          if (validationResult.issues.includes('Les coordonnées pointent vers une zone très isolée')) {
+            result.flags.push('remote_location');
+            result.reasons.push('Zone très isolée - vérifier la véracité');
+          }
+        } else {
+          result.score -= 5;
+          result.flags.push('unable_to_geocode');
+          result.reasons.push('Impossible de géocoder la localisation');
+        }
+
+      } catch (error) {
+        logger.warn('Geocoding validation failed:', error);
+        result.flags.push('geocoding_error');
+        result.reasons.push('Erreur lors de la validation de la localisation');
+      }
+    } else {
+      // Pas de localisation fournie
+      result.score -= 5;
+      result.reasons.push('Aucune localisation fournie');
     }
   }
 
@@ -715,7 +805,7 @@ export class ModerationService {
    */
   private async makeDecision(result: ModerationResult, report: any): Promise<void> {
     // Vérifier les flags critiques
-    const criticalFlags = ['personalInfo:detected', 'excessive_spam', 'inappropriate_video_content'];
+    const criticalFlags = ['personalInfo:detected', 'excessive_spam', 'inappropriate_video_content', 'ocean_location'];
     const hasCriticalFlag = result.flags.some(flag => 
       criticalFlags.some(critical => flag.includes(critical))
     );
@@ -746,8 +836,12 @@ export class ModerationService {
       result.reasons.push('Score neutre, nécessite une revue humaine');
     }
 
-    // Ajuster en fonction du trust score
-    if (report.trust_score > 80 && !hasCriticalFlag) {
+    // Ajuster en fonction du trust score calculé
+    const calculatedTrustScore = report.user_approved_count && report.user_report_count
+      ? Math.min(100, Math.round((report.user_approved_count / report.user_report_count) * 100))
+      : 50;
+    
+    if (calculatedTrustScore > 80 && !hasCriticalFlag) {
       result.confidence = Math.min(result.confidence + 10, 99);
     }
   }
@@ -804,7 +898,7 @@ export class ModerationService {
       `INSERT INTO notifications (user_id, type, content, related_id, priority)
        VALUES ($1, $2, $3, $4, $5)`,
       [
-        report.user_id,
+        report.reporter_id,
         result.approved ? 'report_approved' : 'report_rejected',
         message,
         report.id,
@@ -1098,9 +1192,30 @@ export class ModerationService {
       let imageBuffer: Buffer;
 
       if (typeof imagePathOrBuffer === 'string') {
-        // Charger l'image depuis le chemin
-        const fs = require('fs');
-        imageBuffer = fs.readFileSync(imagePathOrBuffer);
+        // ✅ CORRECTION : Gérer les URLs Cloudinary correctement
+        if (imagePathOrBuffer.startsWith('http://') || imagePathOrBuffer.startsWith('https://')) {
+          // Télécharger l'image depuis l'URL
+          const response = await axios.get(imagePathOrBuffer, {
+            responseType: 'arraybuffer',
+            timeout: 10000
+          });
+          imageBuffer = Buffer.from(response.data);
+        } else {
+          // Charger l'image depuis le système de fichiers local
+          const fs = require('fs');
+          // Vérifier que le fichier existe
+          if (!fs.existsSync(imagePathOrBuffer)) {
+            logger.warn(`Image file not found: ${imagePathOrBuffer}`);
+            return {
+              isSafe: true,
+              confidence: 0,
+              labels: ['file_not_found'],
+              action: 'allow',
+              nsfw: { drawing: 0, hentai: 0, neutral: 1, porn: 0, sexy: 0 },
+            };
+          }
+          imageBuffer = fs.readFileSync(imagePathOrBuffer);
+        }
       } else {
         imageBuffer = imagePathOrBuffer;
       }
@@ -1295,7 +1410,6 @@ export class ModerationService {
    */
   private async basicImageAnalysis(imageBuffer: Buffer): Promise<ImageModerationResult> {
     try {
-      const metadata = await sharp(imageBuffer).metadata();
       const stats = await sharp(imageBuffer).stats();
 
       // Analyse simple des couleurs chair
@@ -1449,7 +1563,7 @@ export class ModerationService {
       await query(
         `INSERT INTO notifications (user_id, type, content, related_id)
          VALUES ($1, $2, $3, $4)`,
-        [report.rows[0].user_id, 'report_reviewed', message, reportId]
+        [report.rows[0].reporter_id, 'report_reviewed', message, reportId]
       );
 
       logger.info(`[AI Learning] Learned from manual moderation for report ${reportId}: ${manualDecision}`);
@@ -1548,7 +1662,7 @@ export class ModerationService {
           COUNT(*) as report_count,
           COUNT(CASE WHEN r.status = 'approved' THEN 1 END) as approved_count
          FROM reports r
-         JOIN users u ON r.user_id = u.id
+         JOIN users u ON r.reporter_id = u.id
          WHERE r.created_at BETWEEN $1 AND $2
          GROUP BY u.id, u.username
          ORDER BY report_count DESC

@@ -4,30 +4,49 @@ import { logger } from '../utils/logger';
 
 let smsProvider: any;
 let providerType: string;
+let isInitialized = false;
 
-function initializeSMS() {
+function initializeSMS(): void {
+  if (isInitialized) return;
+  
   providerType = process.env.SMS_PROVIDER || 'twilio';
   
-  if (providerType === 'twilio' && process.env.TWILIO_ACCOUNT_SID) {
-    smsProvider = twilio(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
-    );
-    logger.info('✅ Twilio SMS provider initialized');
+  if (providerType === 'twilio' && process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    try {
+      smsProvider = twilio(
+        process.env.TWILIO_ACCOUNT_SID,
+        process.env.TWILIO_AUTH_TOKEN
+      );
+      isInitialized = true;
+      logger.info('✅ Twilio SMS provider initialized');
+      logger.info(`   From: ${process.env.TWILIO_PHONE_NUMBER}`);
+    } catch (error: any) {
+      logger.error('❌ Failed to initialize Twilio:', error.message);
+      smsProvider = null;
+    }
   } else if (providerType === 'africastalking' && process.env.AT_API_KEY) {
-    smsProvider = AfricasTalking({
-      apiKey: process.env.AT_API_KEY,
-      username: process.env.AT_USERNAME || 'sandbox'
-    });
-    logger.info('✅ Africa\'s Talking SMS provider initialized');
+    try {
+      smsProvider = AfricasTalking({
+        apiKey: process.env.AT_API_KEY,
+        username: process.env.AT_USERNAME || 'sandbox'
+      });
+      isInitialized = true;
+      logger.info('✅ Africa\'s Talking SMS provider initialized');
+    } catch (error: any) {
+      logger.error('❌ Failed to initialize Africa\'s Talking:', error.message);
+      smsProvider = null;
+    }
   } else {
     logger.warn('⚠️ No SMS provider configured - SMS will be logged only');
+    smsProvider = null;
+    isInitialized = true;
   }
 }
 
 export async function sendSMS(to: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    if (!smsProvider) {
+    // Initialiser si pas encore fait
+    if (!isInitialized) {
       initializeSMS();
     }
     
@@ -40,6 +59,8 @@ export async function sendSMS(to: string, message: string): Promise<{ success: b
         cleanNumber = '+243' + cleanNumber.substring(1);
       } else if (cleanNumber.length === 9) {
         cleanNumber = '+243' + cleanNumber;
+      } else if (cleanNumber.length === 10) {
+        cleanNumber = '+243' + cleanNumber.substring(1);
       }
     }
     
@@ -52,28 +73,51 @@ export async function sendSMS(to: string, message: string): Promise<{ success: b
     }
     
     if (providerType === 'twilio') {
-      const result = await smsProvider.messages.create({
-        body: message,
-        from: process.env.TWILIO_PHONE_NUMBER,
-        to: cleanNumber
-      });
-      
-      logger.info(`✅ SMS sent via Twilio: ${result.sid}`);
-      return { success: true, messageId: result.sid };
+      try {
+        const result = await smsProvider.messages.create({
+          body: message,
+          from: process.env.TWILIO_PHONE_NUMBER,
+          to: cleanNumber
+        });
+        
+        logger.info(`✅ SMS sent via Twilio: ${result.sid}`);
+        logger.info(`   Status: ${result.status}`);
+        return { success: true, messageId: result.sid };
+      } catch (twilioError: any) {
+        logger.error('❌ Twilio SMS error:', twilioError.message);
+        logger.error('   Code:', twilioError.code);
+        logger.error('   More info:', twilioError.moreInfo);
+        
+        // Vérifier les erreurs courantes
+        if (twilioError.code === 21211) {
+          return { success: false, error: 'Numéro de téléphone invalide' };
+        } else if (twilioError.code === 21608) {
+          return { success: false, error: 'Numéro non vérifié dans Twilio (mode trial)' };
+        } else if (twilioError.code === 20003) {
+          return { success: false, error: 'Authentification Twilio échouée' };
+        }
+        
+        return { success: false, error: twilioError.message };
+      }
       
     } else if (providerType === 'africastalking') {
-      const sms = smsProvider.SMS;
-      const result = await sms.send({
-        to: [cleanNumber],
-        message,
-        from: process.env.AT_SENDER_ID || 'DENONCIATION'
-      });
-      
-      logger.info(`✅ SMS sent via Africa's Talking: ${JSON.stringify(result)}`);
-      return { 
-        success: true, 
-        messageId: result.SMSMessageData?.Recipients?.[0]?.messageId 
-      };
+      try {
+        const sms = smsProvider.SMS;
+        const result = await sms.send({
+          to: [cleanNumber],
+          message,
+          from: process.env.AT_SENDER_ID || 'DENONCIATION'
+        });
+        
+        logger.info(`✅ SMS sent via Africa's Talking: ${JSON.stringify(result)}`);
+        return { 
+          success: true, 
+          messageId: result.SMSMessageData?.Recipients?.[0]?.messageId 
+        };
+      } catch (atError: any) {
+        logger.error('❌ Africa\'s Talking SMS error:', atError.message);
+        return { success: false, error: atError.message };
+      }
     }
     
     return { success: false, error: 'No SMS provider configured' };
@@ -108,6 +152,12 @@ export async function sendWarningSMS(to: string, violationCount: number, violati
 
 export async function sendBanNotificationSMS(to: string, reason: string): Promise<boolean> {
   const message = `[DENONCIATION] Votre compte a été banni. Raison: ${reason}. Contactez l'administration pour plus d'informations.`;
+  const result = await sendSMS(to, message);
+  return result.success;
+}
+
+export async function sendVerificationSMS(to: string, code: string): Promise<boolean> {
+  const message = `[DENONCIATION] Votre code de vérification est: ${code}. Ce code expire dans 10 minutes.`;
   const result = await sendSMS(to, message);
   return result.success;
 }

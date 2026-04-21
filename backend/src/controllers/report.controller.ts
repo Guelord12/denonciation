@@ -6,42 +6,188 @@ import { io } from '../index';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { moderateReport, autoModerateAllPending } from '../services/aiModeration.service';
 
-// Fonction utilitaire pour extraire l'ID des params en toute sécurité
+// =====================================================
+// FONCTIONS UTILITAIRES
+// =====================================================
+
+/**
+ * Extrait l'ID des paramètres de manière sécurisée
+ * Gère le cas où params.id est un tableau (req.params avec plusieurs valeurs)
+ */
 function getParamId(params: any): string {
   return Array.isArray(params.id) ? params.id[0] : params.id;
 }
 
+/**
+ * Anonymise un rapport pour les utilisateurs non autorisés
+ * Cache le nom d'utilisateur, l'avatar, le prénom et le nom
+ */
+function anonymizeReport(report: any): any {
+  if (!report) return report;
+  
+  return {
+    ...report,
+    username: 'Utilisateur anonyme',
+    user_avatar: null,
+    first_name: null,
+    last_name: null,
+  };
+}
+
+/**
+ * Récupère un rapport avec tous ses détails (catégorie, ville, compteurs)
+ * @param id - ID du rapport
+ * @param anonymize - Si true, anonymise le rapport pour les non-admins
+ */
+async function getReportWithDetails(id: number, anonymize: boolean = true): Promise<any> {
+  const result = await query(
+    `SELECT 
+      r.*,
+      u.username, u.avatar as user_avatar, u.first_name, u.last_name, u.id as user_id,
+      c.name as category_name, c.icon as category_icon, c.color as category_color,
+      ci.name as city_name, ci.country as city_country,
+      (SELECT COUNT(*) FROM likes WHERE report_id = r.id) as likes_count,
+      (SELECT COUNT(*) FROM comments WHERE report_id = r.id) as comments_count,
+      (SELECT COUNT(*) FROM witnesses WHERE report_id = r.id) as witnesses_count,
+      (SELECT COUNT(*) FROM shares WHERE report_id = r.id) as shares_count
+     FROM reports r
+     LEFT JOIN users u ON r.reporter_id = u.id
+     LEFT JOIN categories c ON r.category_id = c.id
+     LEFT JOIN cities ci ON r.city_id = ci.id
+     WHERE r.id = $1`,
+    [id]
+  );
+
+  const report = result.rows[0];
+  
+  if (report && anonymize) {
+    return anonymizeReport(report);
+  }
+  
+  return report || null;
+}
+
+/**
+ * Notifie tous les administrateurs d'un nouvel événement
+ * @param type - Type de notification
+ * @param content - Contenu de la notification
+ * @param relatedId - ID de l'entité concernée
+ */
+async function notifyAdmins(type: string, content: string, relatedId: number): Promise<void> {
+  const admins = await query('SELECT id FROM users WHERE is_admin = true');
+  
+  for (const admin of admins.rows) {
+    await query(
+      `INSERT INTO notifications (user_id, type, content, related_id)
+       VALUES ($1, $2, $3, $4)`,
+      [admin.id, type, content, relatedId]
+    );
+  }
+}
+
+/**
+ * Enregistre une activité utilisateur dans les logs
+ * @param userId - ID de l'utilisateur
+ * @param action - Action effectuée
+ * @param entityType - Type d'entité concernée
+ * @param entityId - ID de l'entité concernée
+ * @param req - Requête Express (pour IP et User-Agent)
+ */
+async function logActivity(
+  userId: number, 
+  action: string, 
+  entityType: string, 
+  entityId: number, 
+  req: Request
+): Promise<void> {
+  await query(
+    `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [
+      userId, 
+      action, 
+      entityType, 
+      entityId, 
+      req.ip || req.socket.remoteAddress || 'unknown', 
+      req.headers['user-agent'] || 'unknown'
+    ]
+  );
+}
+
+// =====================================================
+// CONTRÔLEURS PRINCIPAUX
+// =====================================================
+
+/**
+ * Crée un nouveau signalement
+ * @route POST /api/reports
+ * @access Privé (authentifié)
+ */
 export async function createReport(req: AuthRequest, res: Response): Promise<void> {
   try {
     const userId = req.user!.id;
-    const { title, description, category_id, city_id, latitude, longitude, is_live } = req.body;
+    const { 
+      title, 
+      description, 
+      category_id, 
+      city_id, 
+      latitude, 
+      longitude, 
+      is_live,
+      is_anonymous = true,
+      visibility_mode = 'anonymous'
+    } = req.body;
     
     let mediaPath: string | null = null;
     let mediaType: string | null = null;
 
+    // Gestion de l'upload de média
     if (req.file) {
       mediaPath = await uploadToCloudinary(req.file, 'reports');
       mediaType = req.file.mimetype.startsWith('image/') ? 'image' : 
                   req.file.mimetype.startsWith('video/') ? 'video' : 'document';
     }
 
-    // ✅ CORRECTION : Utiliser reporter_id
+    // ✅ CORRECTION : Utiliser UNIQUEMENT reporter_id (pas de user_id dans la table)
     const result = await query(
       `INSERT INTO reports 
-       (reporter_id, title, description, category_id, city_id, latitude, longitude, media_type, media_path, is_live, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
+       (reporter_id, title, description, category_id, city_id, latitude, longitude, 
+        media_type, media_path, is_live, status, is_anonymous, visibility_mode)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending', $11, $12)
        RETURNING *`,
-      [userId, title, description, category_id, city_id, latitude, longitude, mediaType, mediaPath, is_live || false]
+      [
+        userId,                // $1  - reporter_id
+        title,                 // $2  - title
+        description,           // $3  - description
+        category_id,           // $4  - category_id
+        city_id,               // $5  - city_id
+        latitude,              // $6  - latitude
+        longitude,             // $7  - longitude
+        mediaType,             // $8  - media_type
+        mediaPath,             // $9  - media_path
+        is_live || false,      // $10 - is_live
+        is_anonymous,          // $11 - is_anonymous (champ de visibilité)
+        visibility_mode        // $12 - visibility_mode (champ de visibilité)
+      ]
     );
 
     const report = result.rows[0];
+    
+    // Récupérer le rapport complet avec toutes les relations
     const fullReport = await getReportWithDetails(report.id, false);
 
+    // Notifier les administrateurs
     await notifyAdmins('new_report', `Nouveau signalement: ${title}`, report.id);
-    io.emit('new_report', anonymizeReport(fullReport));
+    
+    // Émettre l'événement WebSocket avec les règles de visibilité
+    const reportForClients = await getReportWithDetails(report.id, true);
+    io.emit('new_report', reportForClients);
+    
+    // Logger l'activité
     await logActivity(userId, 'CREATE_REPORT', 'report', report.id, req);
 
-    // ✅ LANCER LA MODÉRATION IA EN ARRIÈRE-PLAN (NON BLOQUANT)
+    // LANCER LA MODÉRATION IA EN ARRIÈRE-PLAN (NON BLOQUANT)
+    // Cette opération s'exécute de manière asynchrone pour ne pas ralentir la réponse
     setTimeout(async () => {
       try {
         logger.info(`🤖 [AI] Starting background moderation for report ${report.id}`);
@@ -50,12 +196,13 @@ export async function createReport(req: AuthRequest, res: Response): Promise<voi
         if (!moderationResult.requiresManualReview) {
           const newStatus = moderationResult.approved ? 'approved' : 'rejected';
           
+          // Mettre à jour le statut du signalement
           await query(
             `UPDATE reports SET status = $1, updated_at = NOW() WHERE id = $2`,
             [newStatus, report.id]
           );
           
-          // Notifier l'utilisateur
+          // Notifier l'utilisateur du résultat de la modération
           await query(
             `INSERT INTO notifications (user_id, type, content, related_id)
              VALUES ($1, 'report_status', $2, $3)`,
@@ -70,7 +217,14 @@ export async function createReport(req: AuthRequest, res: Response): Promise<voi
           await query(
             `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
              VALUES ($1, $2, $3, $4, $5, $6)`,
-            [userId, 'AI_AUTO_MODERATION', 'report', report.id, req.ip || req.socket.remoteAddress, req.headers['user-agent']]
+            [
+              userId, 
+              'AI_AUTO_MODERATION', 
+              'report', 
+              report.id, 
+              req.ip || req.socket.remoteAddress || 'unknown', 
+              req.headers['user-agent'] || 'unknown'
+            ]
           );
           
           logger.info(`✅ [AI] Auto-moderated report ${report.id}: ${newStatus} (confidence: ${moderationResult.confidence}%, score: ${moderationResult.score})`);
@@ -85,9 +239,9 @@ export async function createReport(req: AuthRequest, res: Response): Promise<voi
       } catch (aiError) {
         logger.error('❌ [AI] Background moderation error:', aiError);
       }
-    }, 1000);
+    }, 1000); // Délai de 1 seconde pour ne pas bloquer la réponse
 
-    // Message plus informatif pour l'utilisateur
+    // Réponse au client
     res.status(201).json({
       ...fullReport,
       message: 'Votre signalement a été créé et sera analysé automatiquement.'
@@ -98,6 +252,11 @@ export async function createReport(req: AuthRequest, res: Response): Promise<voi
   }
 }
 
+/**
+ * Récupère la liste des signalements avec filtres et pagination
+ * @route GET /api/reports
+ * @access Public (avec règles d'anonymat)
+ */
 export async function getReports(req: Request, res: Response): Promise<void> {
   try {
     const { 
@@ -118,11 +277,13 @@ export async function getReports(req: Request, res: Response): Promise<void> {
     let whereClause = 'WHERE 1=1';
     const params: any[] = [];
 
+    // Filtre par catégorie
     if (category) {
       params.push(category);
       whereClause += ` AND r.category_id = $${params.length}`;
     }
 
+    // Filtre par ville
     if (city) {
       params.push(city);
       whereClause += ` AND r.city_id = $${params.length}`;
@@ -136,19 +297,20 @@ export async function getReports(req: Request, res: Response): Promise<void> {
       whereClause += ` AND r.status = 'approved'`;
     }
 
-    // ✅ CORRECTION : Filtrer par utilisateur avec reporter_id
+    // Filtre par utilisateur (reporter_id)
     if (user_id) {
       params.push(user_id);
       whereClause += ` AND r.reporter_id = $${params.length}`;
     }
 
+    // Validation des champs de tri
     const allowedSortFields = ['created_at', 'views_count', 'likes_count'];
     const sortField = allowedSortFields.includes(String(sort)) ? sort : 'created_at';
     const sortOrder = order === 'ASC' ? 'ASC' : 'DESC';
 
     const isAdmin = (req as AuthRequest).user?.is_admin || false;
 
-    // ✅ CORRECTION : Utiliser reporter_id dans la jointure
+    // Requête principale avec toutes les jointures
     const reports = await query(
       `SELECT 
         r.*,
@@ -169,6 +331,7 @@ export async function getReports(req: Request, res: Response): Promise<void> {
       [...params, limitNum, offset]
     );
 
+    // Comptage total pour la pagination
     const countResult = await query(
       `SELECT COUNT(*) as total FROM reports r ${whereClause}`,
       params
@@ -192,6 +355,11 @@ export async function getReports(req: Request, res: Response): Promise<void> {
   }
 }
 
+/**
+ * Récupère un signalement par son ID
+ * @route GET /api/reports/:id
+ * @access Public (avec règles d'anonymat et de visibilité)
+ */
 export async function getReportById(req: Request, res: Response): Promise<void> {
   try {
     const id = getParamId(req.params);
@@ -205,14 +373,17 @@ export async function getReportById(req: Request, res: Response): Promise<void> 
       return;
     }
 
-    // ✅ CORRECTION : Vérifier avec reporter_id
+    // Vérifier les droits d'accès
+    // Les signalements non approuvés ne sont visibles que par leur auteur et les admins
     if (report.status !== 'approved' && report.reporter_id !== userId && !isAdmin) {
       res.status(403).json({ error: 'Ce signalement est en attente de validation' });
       return;
     }
 
+    // Incrémenter le compteur de vues
     await query('UPDATE reports SET views_count = views_count + 1 WHERE id = $1', [id]);
 
+    // Récupérer les commentaires avec gestion de l'anonymat
     const comments = await query(
       `SELECT c.*, 
               CASE WHEN $2 THEN 'Utilisateur anonyme' ELSE u.username END as username,
@@ -225,6 +396,7 @@ export async function getReportById(req: Request, res: Response): Promise<void> 
       [id, !isAdmin]
     );
 
+    // Récupérer les témoignages avec gestion de l'anonymat
     const witnesses = await query(
       `SELECT w.*, 
               CASE WHEN $2 THEN 'Utilisateur anonyme' ELSE u.username END as username,
@@ -236,6 +408,7 @@ export async function getReportById(req: Request, res: Response): Promise<void> 
       [id, !isAdmin]
     );
 
+    // Vérifier les interactions de l'utilisateur courant
     let userLiked = false;
     let userWitnessed = false;
     
@@ -271,13 +444,18 @@ export async function getReportById(req: Request, res: Response): Promise<void> 
   }
 }
 
+/**
+ * Met à jour un signalement
+ * @route PUT /api/reports/:id
+ * @access Privé (auteur ou admin)
+ */
 export async function updateReport(req: AuthRequest, res: Response): Promise<void> {
   try {
     const id = getParamId(req.params);
     const userId = req.user!.id;
     const { title, description, category_id, city_id } = req.body;
 
-    // ✅ CORRECTION : Utiliser reporter_id
+    // Vérifier que l'utilisateur est l'auteur du signalement
     const reportResult = await query(
       'SELECT reporter_id FROM reports WHERE id = $1',
       [id]
@@ -288,6 +466,7 @@ export async function updateReport(req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
+    // Seul l'auteur ou un admin peut modifier
     if (reportResult.rows[0].reporter_id !== userId && !req.user!.is_admin) {
       res.status(403).json({ error: 'Non autorisé' });
       return;
@@ -332,12 +511,17 @@ export async function updateReport(req: AuthRequest, res: Response): Promise<voi
   }
 }
 
+/**
+ * Supprime un signalement
+ * @route DELETE /api/reports/:id
+ * @access Privé (auteur ou admin)
+ */
 export async function deleteReport(req: AuthRequest, res: Response): Promise<void> {
   try {
     const id = getParamId(req.params);
     const userId = req.user!.id;
 
-    // ✅ CORRECTION : Utiliser reporter_id
+    // Vérifier que l'utilisateur est l'auteur du signalement
     const reportResult = await query(
       'SELECT reporter_id FROM reports WHERE id = $1',
       [id]
@@ -348,6 +532,7 @@ export async function deleteReport(req: AuthRequest, res: Response): Promise<voi
       return;
     }
 
+    // Seul l'auteur ou un admin peut supprimer
     if (reportResult.rows[0].reporter_id !== userId && !req.user!.is_admin) {
       res.status(403).json({ error: 'Non autorisé' });
       return;
@@ -363,6 +548,11 @@ export async function deleteReport(req: AuthRequest, res: Response): Promise<voi
   }
 }
 
+/**
+ * Like/Unlike un signalement
+ * @route POST /api/reports/:id/like
+ * @access Privé (authentifié)
+ */
 export async function likeReport(req: AuthRequest, res: Response): Promise<void> {
   try {
     const id = getParamId(req.params);
@@ -374,6 +564,7 @@ export async function likeReport(req: AuthRequest, res: Response): Promise<void>
     );
 
     if (existingLike.rows.length > 0) {
+      // Unlike
       await query('DELETE FROM likes WHERE report_id = $1 AND user_id = $2', [id, userId]);
       
       const likesCount = await query(
@@ -383,6 +574,7 @@ export async function likeReport(req: AuthRequest, res: Response): Promise<void>
 
       res.json({ liked: false, likes_count: parseInt(likesCount.rows[0].count) });
     } else {
+      // Like
       await query(
         'INSERT INTO likes (report_id, user_id) VALUES ($1, $2)',
         [id, userId]
@@ -393,12 +585,13 @@ export async function likeReport(req: AuthRequest, res: Response): Promise<void>
         [id]
       );
 
-      // ✅ CORRECTION : Utiliser reporter_id
+      // Récupérer l'auteur du signalement pour la notification
       const report = await query(
         'SELECT reporter_id, title FROM reports WHERE id = $1',
         [id]
       );
 
+      // Notifier l'auteur (sauf si c'est lui-même)
       if (report.rows[0].reporter_id !== userId) {
         await query(
           `INSERT INTO notifications (user_id, type, content, related_id)
@@ -415,12 +608,18 @@ export async function likeReport(req: AuthRequest, res: Response): Promise<void>
   }
 }
 
+/**
+ * Ajoute un témoignage à un signalement
+ * @route POST /api/reports/:id/witness
+ * @access Privé (authentifié)
+ */
 export async function addWitness(req: AuthRequest, res: Response): Promise<void> {
   try {
     const id = getParamId(req.params);
     const userId = req.user!.id;
     const { testimony } = req.body;
 
+    // Vérifier que l'utilisateur n'a pas déjà témoigné
     const existingWitness = await query(
       'SELECT id FROM witnesses WHERE report_id = $1 AND user_id = $2',
       [id, userId]
@@ -438,12 +637,13 @@ export async function addWitness(req: AuthRequest, res: Response): Promise<void>
       [id, userId, testimony]
     );
 
-    // ✅ CORRECTION : Utiliser reporter_id
+    // Récupérer l'auteur du signalement pour la notification
     const report = await query(
       'SELECT reporter_id, title FROM reports WHERE id = $1',
       [id]
     );
 
+    // Notifier l'auteur (sauf si c'est lui-même)
     if (report.rows[0].reporter_id !== userId) {
       await query(
         `INSERT INTO notifications (user_id, type, content, related_id)
@@ -459,6 +659,11 @@ export async function addWitness(req: AuthRequest, res: Response): Promise<void>
   }
 }
 
+/**
+ * Partage un signalement
+ * @route POST /api/reports/:id/share
+ * @access Privé (authentifié)
+ */
 export async function shareReport(req: AuthRequest, res: Response): Promise<void> {
   try {
     const id = getParamId(req.params);
@@ -481,69 +686,8 @@ export async function shareReport(req: AuthRequest, res: Response): Promise<void
 }
 
 // =====================================================
-// FONCTIONS UTILITAIRES
+// EXPORTS
 // =====================================================
 
-function anonymizeReport(report: any): any {
-  if (!report) return report;
-  
-  return {
-    ...report,
-    username: 'Utilisateur anonyme',
-    user_avatar: null,
-    first_name: null,
-    last_name: null,
-  };
-}
-
-async function getReportWithDetails(id: number, anonymize: boolean = true): Promise<any> {
-  // ✅ CORRECTION : Utiliser reporter_id
-  const result = await query(
-    `SELECT 
-      r.*,
-      u.username, u.avatar as user_avatar, u.first_name, u.last_name, u.id as user_id,
-      c.name as category_name, c.icon as category_icon, c.color as category_color,
-      ci.name as city_name, ci.country as city_country,
-      (SELECT COUNT(*) FROM likes WHERE report_id = r.id) as likes_count,
-      (SELECT COUNT(*) FROM comments WHERE report_id = r.id) as comments_count,
-      (SELECT COUNT(*) FROM witnesses WHERE report_id = r.id) as witnesses_count,
-      (SELECT COUNT(*) FROM shares WHERE report_id = r.id) as shares_count
-     FROM reports r
-     LEFT JOIN users u ON r.reporter_id = u.id
-     LEFT JOIN categories c ON r.category_id = c.id
-     LEFT JOIN cities ci ON r.city_id = ci.id
-     WHERE r.id = $1`,
-    [id]
-  );
-
-  const report = result.rows[0];
-  
-  if (report && anonymize) {
-    return anonymizeReport(report);
-  }
-  
-  return report || null;
-}
-
-async function notifyAdmins(type: string, content: string, relatedId: number): Promise<void> {
-  const admins = await query('SELECT id FROM users WHERE is_admin = true');
-  
-  for (const admin of admins.rows) {
-    await query(
-      `INSERT INTO notifications (user_id, type, content, related_id)
-       VALUES ($1, $2, $3, $4)`,
-      [admin.id, type, content, relatedId]
-    );
-  }
-}
-
-async function logActivity(userId: number, action: string, entityType: string, entityId: number, req: Request): Promise<void> {
-  await query(
-    `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [userId, action, entityType, entityId, req.ip || req.socket.remoteAddress, req.headers['user-agent']]
-  );
-}
-
-// ✅ Exporter la fonction pour le scheduler
+// Exporter la fonction pour le scheduler de modération automatique
 export { autoModerateAllPending };

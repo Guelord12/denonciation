@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { MapPin, Eye, Heart, MessageCircle } from 'lucide-react-native';
+import { MapPin, Eye, Heart, MessageCircle, Lock, Globe } from 'lucide-react-native';
 import { formatDistance } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useAuthStore } from '../../stores/authStore';
@@ -17,10 +17,15 @@ interface ReportCardProps {
     city_name?: string;
     username?: string;
     user_avatar?: string;
+    first_name?: string;
+    last_name?: string;
     likes_count?: number;
     comments_count?: number;
     views_count?: number;
     created_at: string;
+    is_anonymous?: boolean;
+    visibility_mode?: 'anonymous' | 'visible';
+    reporter_id?: number;
   };
 }
 
@@ -28,9 +33,18 @@ export default function ReportCard({ report }: ReportCardProps) {
   const navigation = useNavigation();
   const { user } = useAuthStore();
 
-  // ✅ Anonymat : afficher "Utilisateur anonyme" pour les non-admins
-  const displayName = user?.is_admin ? (report.username || 'Utilisateur anonyme') : 'Utilisateur anonyme';
-  const displayAvatar = user?.is_admin ? report.user_avatar : null;
+  // ✅ Déterminer si on doit afficher l'identité
+  const isAdmin = user?.is_admin || false;
+  const currentUserId = user?.id || null;
+  const isOwner = report.reporter_id === currentUserId;
+  const showIdentity = !report.is_anonymous && report.visibility_mode === 'visible';
+  
+  // Anonymiser l'affichage selon les règles
+  const displayName = (showIdentity || isOwner || isAdmin) && report.username
+    ? report.username
+    : 'Utilisateur anonyme';
+  
+  const displayAvatar = (showIdentity || isOwner || isAdmin) ? report.user_avatar : null;
   const displayInitial = displayName === 'Utilisateur anonyme' ? 'A' : displayName.charAt(0).toUpperCase();
 
   return (
@@ -54,6 +68,19 @@ export default function ReportCard({ report }: ReportCardProps) {
               {report.category_icon} {report.category_name}
             </Text>
           </View>
+          
+          {/* ✅ Badge de visibilité */}
+          {report.visibility_mode === 'anonymous' ? (
+            <View style={[styles.visibilityBadge, { backgroundColor: '#8B5CF6' + '20' }]}>
+              <Lock size={10} color="#8B5CF6" />
+              <Text style={[styles.visibilityBadgeText, { color: '#8B5CF6' }]}>Anonyme</Text>
+            </View>
+          ) : (
+            <View style={[styles.visibilityBadge, { backgroundColor: '#10B981' + '20' }]}>
+              <Globe size={10} color="#10B981" />
+              <Text style={[styles.visibilityBadgeText, { color: '#10B981' }]}>Visible</Text>
+            </View>
+          )}
         </View>
 
         <Text style={styles.title} numberOfLines={2}>
@@ -68,11 +95,21 @@ export default function ReportCard({ report }: ReportCardProps) {
             {displayAvatar ? (
               <Image source={{ uri: displayAvatar }} style={styles.avatar} />
             ) : (
-              <View style={[styles.avatarPlaceholder, !user?.is_admin && styles.avatarAnonymous]}>
+              <View style={[
+                styles.avatarPlaceholder,
+                displayName === 'Utilisateur anonyme' && styles.avatarAnonymous
+              ]}>
                 <Text style={styles.avatarText}>{displayInitial}</Text>
               </View>
             )}
-            <Text style={styles.username}>{displayName}</Text>
+            <View style={styles.userTextContainer}>
+              <Text style={styles.username}>{displayName}</Text>
+              {isOwner && (
+                <View style={styles.ownerBadge}>
+                  <Text style={styles.ownerBadgeText}>Vous</Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {report.city_name && (
@@ -130,7 +167,9 @@ const styles = StyleSheet.create({
   },
   categoryContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 8,
+    gap: 8,
   },
   categoryBadge: {
     paddingHorizontal: 8,
@@ -139,6 +178,18 @@ const styles = StyleSheet.create({
   },
   categoryText: {
     fontSize: 12,
+    fontWeight: '500',
+  },
+  visibilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    gap: 4,
+  },
+  visibilityBadgeText: {
+    fontSize: 10,
     fontWeight: '500',
   },
   title: {
@@ -162,6 +213,7 @@ const styles = StyleSheet.create({
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   avatar: {
     width: 24,
@@ -186,9 +238,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  userTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   username: {
     fontSize: 14,
     color: '#666',
+  },
+  ownerBadge: {
+    backgroundColor: '#3B82F6' + '20',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  ownerBadgeText: {
+    fontSize: 10,
+    color: '#3B82F6',
+    fontWeight: '500',
   },
   location: {
     flexDirection: 'row',

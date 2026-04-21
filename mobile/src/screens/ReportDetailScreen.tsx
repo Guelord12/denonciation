@@ -10,6 +10,7 @@ import {
   Alert,
   Share,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -27,19 +28,153 @@ import {
   Flag,
   Send,
   User,
+  Lock,
+  Globe,
+  AlertCircle,
+  X,
+  Users,
 } from 'lucide-react-native';
 
+// =====================================================
+// TYPES
+// =====================================================
+interface Comment {
+  id: number;
+  content: string;
+  created_at: string;
+  updated_at: string;
+  is_edited: boolean;
+  is_anonymous: boolean;
+  user_id: number;
+  username: string;
+  avatar: string | null;
+  parent_id: number | null;
+}
+
+interface Witness {
+  id: number;
+  testimony: string;
+  created_at: string;
+  is_anonymous: boolean;
+  user_id: number;
+  username: string;
+  avatar: string | null;
+}
+
+interface Report {
+  id: number;
+  title: string;
+  description: string;
+  status: string;
+  reporter_id: number;
+  is_anonymous: boolean;
+  visibility_mode: 'anonymous' | 'visible';
+  media_path: string | null;
+  media_type: string | null;
+  category_name: string;
+  category_icon: string;
+  category_color: string;
+  city_name: string | null;
+  city_country: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  views_count: number;
+  likes_count: number;
+  comments_count: number;
+  witnesses_count: number;
+  shares_count: number;
+  created_at: string;
+  updated_at: string;
+  username: string;
+  user_avatar: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  comments: Comment[];
+  witnesses: Witness[];
+  user_interactions: {
+    liked: boolean;
+    witnessed: boolean;
+  };
+}
+
+// =====================================================
+// FONCTIONS UTILITAIRES DE VISIBILITÉ
+// =====================================================
+function shouldShowIdentity(report: Report, currentUserId: number | null, isAdmin: boolean): boolean {
+  if (isAdmin) return true;
+  if (report.reporter_id === currentUserId) return true;
+  return report.visibility_mode === 'visible' && !report.is_anonymous;
+}
+
+function getDisplayName(report: Report, currentUserId: number | null, isAdmin: boolean): string {
+  if (shouldShowIdentity(report, currentUserId, isAdmin)) {
+    return report.username || `${report.first_name || ''} ${report.last_name || ''}`.trim() || 'Utilisateur';
+  }
+  return 'Utilisateur anonyme';
+}
+
+function getDisplayAvatar(report: Report, currentUserId: number | null, isAdmin: boolean): string | null {
+  if (shouldShowIdentity(report, currentUserId, isAdmin)) {
+    return report.user_avatar;
+  }
+  return null;
+}
+
+function getCommentDisplayName(comment: Comment, report: Report, currentUserId: number | null, isAdmin: boolean): string {
+  if (isAdmin) return comment.username || 'Utilisateur';
+  if (comment.user_id === currentUserId) return comment.username || 'Vous';
+  if (report.reporter_id === currentUserId && report.visibility_mode === 'visible') return comment.username || 'Utilisateur';
+  if (report.visibility_mode === 'visible' && !report.is_anonymous && !comment.is_anonymous) return comment.username || 'Utilisateur';
+  return 'Utilisateur anonyme';
+}
+
+function getCommentDisplayAvatar(comment: Comment, report: Report, currentUserId: number | null, isAdmin: boolean): string | null {
+  if (isAdmin) return comment.avatar;
+  if (comment.user_id === currentUserId) return comment.avatar;
+  if (report.reporter_id === currentUserId && report.visibility_mode === 'visible') return comment.avatar;
+  if (report.visibility_mode === 'visible' && !report.is_anonymous && !comment.is_anonymous) return comment.avatar;
+  return null;
+}
+
+function getWitnessDisplayName(witness: Witness, report: Report, currentUserId: number | null, isAdmin: boolean): string {
+  if (isAdmin) return witness.username || 'Témoin';
+  if (witness.user_id === currentUserId) return witness.username || 'Vous';
+  if (report.reporter_id === currentUserId && report.visibility_mode === 'visible') return witness.username || 'Témoin';
+  if (report.visibility_mode === 'visible' && !report.is_anonymous && !witness.is_anonymous) return witness.username || 'Témoin';
+  return 'Témoin anonyme';
+}
+
+function getWitnessDisplayAvatar(witness: Witness, report: Report, currentUserId: number | null, isAdmin: boolean): string | null {
+  if (isAdmin) return witness.avatar;
+  if (witness.user_id === currentUserId) return witness.avatar;
+  if (report.reporter_id === currentUserId && report.visibility_mode === 'visible') return witness.avatar;
+  if (report.visibility_mode === 'visible' && !report.is_anonymous && !witness.is_anonymous) return witness.avatar;
+  return null;
+}
+
+function getInitials(name: string): string {
+  if (name === 'Utilisateur anonyme') return 'A';
+  if (name === 'Témoin anonyme') return 'T';
+  if (name === 'Vous') return 'V';
+  return name.charAt(0).toUpperCase();
+}
+
+// =====================================================
+// COMPOSANT PRINCIPAL
+// =====================================================
 export default function ReportDetailScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { user, isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
   const { id } = route.params as { id: number };
+  
   const [comment, setComment] = useState('');
   const [testimony, setTestimony] = useState('');
   const [showTestimonyModal, setShowTestimonyModal] = useState(false);
+  const [showVisibilityInfo, setShowVisibilityInfo] = useState(false);
 
-  const { data: report, isLoading } = useQuery({
+  const { data: report, isLoading } = useQuery<Report>({
     queryKey: ['report', id],
     queryFn: () => api.get(`/reports/${id}`).then(res => res.data),
   });
@@ -102,30 +237,12 @@ export default function ReportDetailScreen() {
       'Signaler ce contenu',
       'Choisissez une raison',
       [
-        { text: 'Contenu inapproprié' },
-        { text: 'Fausse information' },
-        { text: 'Harcèlement' },
+        { text: 'Contenu inapproprié', onPress: () => {} },
+        { text: 'Fausse information', onPress: () => {} },
+        { text: 'Harcèlement', onPress: () => {} },
         { text: 'Annuler', style: 'cancel' },
       ]
     );
-  };
-
-  // ✅ Fonction pour obtenir le nom à afficher (anonyme pour tous sauf admin)
-  const getDisplayName = (username: string): string => {
-    if (user?.is_admin) return username;
-    return 'Utilisateur anonyme';
-  };
-
-  // ✅ Fonction pour obtenir l'avatar à afficher
-  const getDisplayAvatar = (avatar: string | null): string | null => {
-    if (user?.is_admin) return avatar;
-    return null;
-  };
-
-  // ✅ Fonction pour obtenir les initiales pour l'avatar par défaut
-  const getInitials = (name: string): string => {
-    if (name === 'Utilisateur anonyme') return 'A';
-    return name.charAt(0).toUpperCase();
   };
 
   if (isLoading) {
@@ -136,69 +253,154 @@ export default function ReportDetailScreen() {
     );
   }
 
-  const reportData = report;
-  const displayName = getDisplayName(reportData?.username || 'Utilisateur anonyme');
-  const displayAvatar = getDisplayAvatar(reportData?.user_avatar || null);
+  if (!report) {
+    return (
+      <View style={styles.errorContainer}>
+        <AlertCircle size={48} color="#EF4444" />
+        <Text style={styles.errorTitle}>Signalement non trouvé</Text>
+        <Text style={styles.errorText}>Ce signalement n'existe pas ou a été supprimé.</Text>
+      </View>
+    );
+  }
+
+  const isAdmin = user?.is_admin || false;
+  const currentUserId = user?.id || null;
+  const isOwner = report.reporter_id === currentUserId;
+  
+  const displayName = getDisplayName(report, currentUserId, isAdmin);
+  const displayAvatar = getDisplayAvatar(report, currentUserId, isAdmin);
   const displayInitial = getInitials(displayName);
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.categoryBadge}>
-          <Text style={[styles.categoryText, { color: reportData?.category_color }]}>
-            {reportData?.category_icon} {reportData?.category_name}
-          </Text>
+        <View style={styles.categoryContainer}>
+          <View style={[styles.categoryBadge, { backgroundColor: report.category_color + '20' }]}>
+            <Text style={[styles.categoryText, { color: report.category_color }]}>
+              {report.category_icon} {report.category_name}
+            </Text>
+          </View>
+          
+          {/* ✅ Badge de visibilité */}
+          <TouchableOpacity
+            style={[
+              styles.visibilityBadge,
+              { backgroundColor: report.visibility_mode === 'anonymous' ? '#8B5CF6' + '20' : '#10B981' + '20' }
+            ]}
+            onPress={() => setShowVisibilityInfo(!showVisibilityInfo)}
+          >
+            {report.visibility_mode === 'anonymous' ? (
+              <>
+                <Lock size={12} color="#8B5CF6" />
+                <Text style={[styles.visibilityBadgeText, { color: '#8B5CF6' }]}>Anonyme</Text>
+              </>
+            ) : (
+              <>
+                <Globe size={12} color="#10B981" />
+                <Text style={[styles.visibilityBadgeText, { color: '#10B981' }]}>Visible</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </View>
-        <Text style={styles.title}>{reportData?.title}</Text>
+
+        {/* ✅ Info visibilité */}
+        {showVisibilityInfo && (
+          <View style={[
+            styles.visibilityInfoBox,
+            { backgroundColor: report.visibility_mode === 'anonymous' ? '#F3E8FF' : '#D1FAE5' }
+          ]}>
+            <View style={styles.visibilityInfoHeader}>
+              {report.visibility_mode === 'anonymous' ? (
+                <Lock size={16} color="#8B5CF6" />
+              ) : (
+                <Globe size={16} color="#10B981" />
+              )}
+              <Text style={[
+                styles.visibilityInfoTitle,
+                { color: report.visibility_mode === 'anonymous' ? '#6B21A8' : '#065F46' }
+              ]}>
+                {report.visibility_mode === 'anonymous' ? 'Mode Anonyme' : 'Mode Visible'}
+              </Text>
+            </View>
+            <Text style={styles.visibilityInfoText}>
+              {report.visibility_mode === 'anonymous' 
+                ? 'L\'auteur a choisi de rester anonyme. Tous les commentaires et témoignages seront également anonymes.'
+                : 'L\'auteur a choisi d\'être visible. Les commentaires et témoignages seront publics.'
+              }
+            </Text>
+            {isOwner && (
+              <Text style={styles.visibilityInfoOwner}>
+                Vous êtes l'auteur de ce signalement. Vous voyez toutes les identités.
+              </Text>
+            )}
+          </View>
+        )}
+
+        <Text style={styles.title}>{report.title}</Text>
         
         <View style={styles.meta}>
           <View style={styles.authorInfo}>
             {displayAvatar ? (
               <Image source={{ uri: displayAvatar }} style={styles.avatar} />
             ) : (
-              <View style={[styles.avatarPlaceholder, !user?.is_admin && styles.avatarAnonymous]}>
+              <View style={[
+                styles.avatarPlaceholder,
+                !shouldShowIdentity(report, currentUserId, isAdmin) && styles.avatarAnonymous
+              ]}>
                 <Text style={styles.avatarText}>{displayInitial}</Text>
               </View>
             )}
             <View>
               <Text style={styles.authorName}>{displayName}</Text>
-              <Text style={styles.date}>
-                {formatDistance(new Date(reportData?.created_at), new Date(), {
-                  addSuffix: true,
-                  locale: fr,
-                })}
-              </Text>
+              <View style={styles.dateContainer}>
+                <Calendar size={12} color="#999" />
+                <Text style={styles.date}>
+                  {formatDistance(new Date(report.created_at), new Date(), {
+                    addSuffix: true,
+                    locale: fr,
+                  })}
+                </Text>
+              </View>
             </View>
           </View>
           
           <View style={styles.stats}>
             <View style={styles.stat}>
-              <Eye size={16} color="#999" />
-              <Text style={styles.statText}>{reportData?.views_count || 0}</Text>
+              <Eye size={14} color="#999" />
+              <Text style={styles.statText}>{report.views_count || 0}</Text>
             </View>
           </View>
         </View>
       </View>
 
       {/* Media */}
-      {reportData?.media_path && (
-        <Image source={{ uri: reportData.media_path }} style={styles.media} />
+      {report.media_path && (
+        <Image source={{ uri: report.media_path }} style={styles.media} />
       )}
 
       {/* Location */}
-      {reportData?.city_name && (
+      {report.city_name && (
         <View style={styles.locationContainer}>
           <MapPin size={16} color="#666" />
           <Text style={styles.locationText}>
-            {reportData.city_name}, {reportData.city_country}
+            {report.city_name}, {report.city_country}
           </Text>
         </View>
       )}
 
       {/* Description */}
       <View style={styles.descriptionContainer}>
-        <Text style={styles.description}>{reportData?.description}</Text>
+        <Text style={styles.description}>{report.description}</Text>
+        
+        {report.latitude && report.longitude && (
+          <View style={styles.gpsContainer}>
+            <MapPin size={14} color="#999" />
+            <Text style={styles.gpsText}>
+              GPS: {Number(report.latitude).toFixed(6)}, {Number(report.longitude).toFixed(6)}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Actions */}
@@ -206,15 +408,15 @@ export default function ReportDetailScreen() {
         <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
           <Heart
             size={24}
-            color={reportData?.user_interactions?.liked ? '#EF4444' : '#666'}
-            fill={reportData?.user_interactions?.liked ? '#EF4444' : 'none'}
+            color={report.user_interactions?.liked ? '#EF4444' : '#666'}
+            fill={report.user_interactions?.liked ? '#EF4444' : 'none'}
           />
-          <Text style={styles.actionText}>{reportData?.likes_count || 0}</Text>
+          <Text style={styles.actionText}>{report.likes_count || 0}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton}>
           <MessageCircle size={24} color="#666" />
-          <Text style={styles.actionText}>{reportData?.comments_count || 0}</Text>
+          <Text style={styles.actionText}>{report.comments_count || 0}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
@@ -237,19 +439,19 @@ export default function ReportDetailScreen() {
           setShowTestimonyModal(true);
         }}
       >
-        <User size={20} color="#3B82F6" />
+        <Users size={20} color="#3B82F6" />
         <Text style={styles.witnessButtonText}>Ajouter un témoignage</Text>
       </TouchableOpacity>
 
       {/* Witnesses */}
-      {reportData?.witnesses?.length > 0 && (
+      {report.witnesses && report.witnesses.length > 0 && (
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            Témoignages ({reportData.witnesses_count})
+            Témoignages ({report.witnesses_count})
           </Text>
-          {reportData.witnesses.map((witness: any) => {
-            const witnessDisplayName = getDisplayName(witness.username || 'Utilisateur anonyme');
-            const witnessDisplayAvatar = getDisplayAvatar(witness.avatar || null);
+          {report.witnesses.map((witness) => {
+            const witnessDisplayName = getWitnessDisplayName(witness, report, currentUserId, isAdmin);
+            const witnessDisplayAvatar = getWitnessDisplayAvatar(witness, report, currentUserId, isAdmin);
             const witnessInitial = getInitials(witnessDisplayName);
             
             return (
@@ -259,7 +461,10 @@ export default function ReportDetailScreen() {
                     {witnessDisplayAvatar ? (
                       <Image source={{ uri: witnessDisplayAvatar }} style={styles.witnessAvatar} />
                     ) : (
-                      <View style={[styles.witnessAvatarPlaceholder, !user?.is_admin && styles.avatarAnonymous]}>
+                      <View style={[
+                        styles.witnessAvatarPlaceholder,
+                        witnessDisplayName === 'Témoin anonyme' && styles.avatarAnonymous
+                      ]}>
                         <Text style={styles.witnessAvatarText}>{witnessInitial}</Text>
                       </View>
                     )}
@@ -282,7 +487,7 @@ export default function ReportDetailScreen() {
       {/* Comments */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>
-          Commentaires ({reportData?.comments_count})
+          Commentaires ({report.comments_count})
         </Text>
 
         {/* Comment Input */}
@@ -293,14 +498,19 @@ export default function ReportDetailScreen() {
               value={comment}
               onChangeText={setComment}
               placeholder="Ajouter un commentaire..."
+              placeholderTextColor="#999"
               multiline
             />
             <TouchableOpacity
               style={[styles.sendButton, !comment.trim() && styles.sendButtonDisabled]}
               onPress={handleComment}
-              disabled={!comment.trim()}
+              disabled={!comment.trim() || commentMutation.isPending}
             >
-              <Send size={20} color={comment.trim() ? '#EF4444' : '#CCC'} />
+              {commentMutation.isPending ? (
+                <ActivityIndicator size="small" color="#EF4444" />
+              ) : (
+                <Send size={20} color={comment.trim() ? '#EF4444' : '#CCC'} />
+              )}
             </TouchableOpacity>
           </View>
         ) : (
@@ -315,36 +525,127 @@ export default function ReportDetailScreen() {
         )}
 
         {/* Comments List */}
-        {reportData?.comments?.map((comment: any) => {
-          const commentDisplayName = getDisplayName(comment.username || 'Utilisateur anonyme');
-          const commentDisplayAvatar = getDisplayAvatar(comment.avatar || null);
-          const commentInitial = getInitials(commentDisplayName);
-          
-          return (
-            <View key={comment.id} style={styles.commentItem}>
-              <View style={styles.commentHeader}>
-                <View style={styles.commentAuthor}>
-                  {commentDisplayAvatar ? (
-                    <Image source={{ uri: commentDisplayAvatar }} style={styles.commentAvatar} />
-                  ) : (
-                    <View style={[styles.commentAvatarPlaceholder, !user?.is_admin && styles.avatarAnonymous]}>
-                      <Text style={styles.commentAvatarText}>{commentInitial}</Text>
+        {report.comments && report.comments.length > 0 ? (
+          report.comments.map((comment) => {
+            const commentDisplayName = getCommentDisplayName(comment, report, currentUserId, isAdmin);
+            const commentDisplayAvatar = getCommentDisplayAvatar(comment, report, currentUserId, isAdmin);
+            const commentInitial = getInitials(commentDisplayName);
+            
+            return (
+              <View key={comment.id} style={styles.commentItem}>
+                <View style={styles.commentHeader}>
+                  <View style={styles.commentAuthor}>
+                    {commentDisplayAvatar ? (
+                      <Image source={{ uri: commentDisplayAvatar }} style={styles.commentAvatar} />
+                    ) : (
+                      <View style={[
+                        styles.commentAvatarPlaceholder,
+                        commentDisplayName === 'Utilisateur anonyme' && styles.avatarAnonymous
+                      ]}>
+                        <Text style={styles.commentAvatarText}>{commentInitial}</Text>
+                      </View>
+                    )}
+                    <View>
+                      <Text style={styles.commentAuthorName}>{commentDisplayName}</Text>
+                      {comment.is_edited && (
+                        <Text style={styles.editedText}>(modifié)</Text>
+                      )}
                     </View>
-                  )}
-                  <Text style={styles.commentAuthorName}>{commentDisplayName}</Text>
+                  </View>
+                  <Text style={styles.commentDate}>
+                    {formatDistance(new Date(comment.created_at), new Date(), {
+                      addSuffix: true,
+                      locale: fr,
+                    })}
+                  </Text>
                 </View>
-                <Text style={styles.commentDate}>
-                  {formatDistance(new Date(comment.created_at), new Date(), {
-                    addSuffix: true,
-                    locale: fr,
-                  })}
-                </Text>
+                <Text style={styles.commentContent}>{comment.content}</Text>
               </View>
-              <Text style={styles.commentContent}>{comment.content}</Text>
-            </View>
-          );
-        })}
+            );
+          })
+        ) : (
+          <View style={styles.noComments}>
+            <MessageCircle size={32} color="#CCC" />
+            <Text style={styles.noCommentsText}>Aucun commentaire pour le moment</Text>
+            <Text style={styles.noCommentsSubtext}>Soyez le premier à commenter !</Text>
+          </View>
+        )}
       </View>
+
+      {/* Testimony Modal */}
+      <Modal
+        visible={showTestimonyModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowTestimonyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Ajouter un témoignage</Text>
+              <TouchableOpacity onPress={() => setShowTestimonyModal(false)}>
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            {/* ✅ Indication de visibilité du témoignage */}
+            <View style={[
+              styles.testimonyVisibilityInfo,
+              { backgroundColor: report.visibility_mode === 'anonymous' ? '#F3E8FF' : '#D1FAE5' }
+            ]}>
+              {report.visibility_mode === 'anonymous' ? (
+                <>
+                  <Lock size={16} color="#8B5CF6" />
+                  <Text style={[styles.testimonyVisibilityText, { color: '#6B21A8' }]}>
+                    Votre témoignage sera anonyme (mode anonyme activé par l'auteur)
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <Globe size={16} color="#10B981" />
+                  <Text style={[styles.testimonyVisibilityText, { color: '#065F46' }]}>
+                    Votre témoignage sera visible publiquement
+                  </Text>
+                </>
+              )}
+            </View>
+
+            <TextInput
+              style={styles.testimonyInput}
+              value={testimony}
+              onChangeText={setTestimony}
+              placeholder="Décrivez ce dont vous avez été témoin..."
+              placeholderTextColor="#999"
+              multiline
+              numberOfLines={6}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => {
+                  setShowTestimonyModal(false);
+                  setTestimony('');
+                }}
+              >
+                <Text style={styles.modalCancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalSubmitButton, (!testimony.trim() || witnessMutation.isPending) && styles.modalSubmitButtonDisabled]}
+                onPress={() => witnessMutation.mutate(testimony)}
+                disabled={!testimony.trim() || witnessMutation.isPending}
+              >
+                {witnessMutation.isPending ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <Text style={styles.modalSubmitButtonText}>Témoigner</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -358,18 +659,81 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#FFF',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginTop: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 8,
   },
   header: {
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
   },
-  categoryBadge: {
+  categoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 12,
+    gap: 8,
+  },
+  categoryBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   categoryText: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '500',
+  },
+  visibilityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  visibilityBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  visibilityInfoBox: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  visibilityInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    gap: 8,
+  },
+  visibilityInfoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  visibilityInfoText: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  visibilityInfoOwner: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 8,
   },
   title: {
     fontSize: 22,
@@ -414,10 +778,15 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#1F2937',
   },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    gap: 4,
+  },
   date: {
     fontSize: 12,
     color: '#999',
-    marginTop: 2,
   },
   stats: {
     flexDirection: 'row',
@@ -459,6 +828,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: '#333',
+  },
+  gpsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 4,
+  },
+  gpsText: {
+    fontSize: 12,
+    color: '#999',
   },
   actions: {
     flexDirection: 'row',
@@ -517,16 +896,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   witnessAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     marginRight: 8,
   },
   witnessAvatarPlaceholder: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#EF4444',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -549,6 +928,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+    paddingLeft: 36,
   },
   commentInputContainer: {
     flexDirection: 'row',
@@ -564,6 +944,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     maxHeight: 100,
     fontSize: 14,
+    backgroundColor: '#FFF',
   },
   sendButton: {
     padding: 10,
@@ -600,15 +981,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   commentAvatar: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     marginRight: 8,
   },
   commentAvatarPlaceholder: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#EF4444',
     justifyContent: 'center',
     alignItems: 'center',
@@ -624,6 +1005,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#1F2937',
   },
+  editedText: {
+    fontSize: 11,
+    color: '#999',
+  },
   commentDate: {
     fontSize: 12,
     color: '#999',
@@ -632,6 +1017,96 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
-    paddingLeft: 32,
+    paddingLeft: 36,
+  },
+  noComments: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  noCommentsText: {
+    fontSize: 16,
+    color: '#999',
+    marginTop: 12,
+  },
+  noCommentsSubtext: {
+    fontSize: 14,
+    color: '#CCC',
+    marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  testimonyVisibilityInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    gap: 8,
+  },
+  testimonyVisibilityText: {
+    flex: 1,
+    fontSize: 13,
+  },
+  testimonyInput: {
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    minHeight: 120,
+    textAlignVertical: 'top',
+    marginBottom: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  modalSubmitButton: {
+    flex: 2,
+    paddingVertical: 14,
+    alignItems: 'center',
+    backgroundColor: '#3B82F6',
+    borderRadius: 8,
+  },
+  modalSubmitButtonDisabled: {
+    opacity: 0.6,
+  },
+  modalSubmitButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
   },
 });

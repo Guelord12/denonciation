@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Eye, Heart, MessageCircle, Share2 } from 'lucide-react';
+import { MapPin, Eye, Heart, MessageCircle, Lock, Globe } from 'lucide-react';
 import { formatDistance } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -16,16 +16,31 @@ interface ReportCardProps {
     city_name?: string;
     username?: string;
     user_avatar?: string;
+    first_name?: string;
+    last_name?: string;
     likes_count?: number;
     comments_count?: number;
     views_count?: number;
     created_at: string;
+    is_anonymous?: boolean;
+    visibility_mode?: 'anonymous' | 'visible';
+    reporter_id?: number;
   };
+  currentUserId?: number | null;
 }
 
-export default function ReportCard({ report }: ReportCardProps) {
-  // Anonymiser l'affichage
-  const displayName = report.username === 'Utilisateur anonyme' || !report.username ? 'Utilisateur anonyme' : report.username;
+export default function ReportCard({ report, currentUserId }: ReportCardProps) {
+  // ✅ Déterminer si on doit afficher l'identité
+  const isOwner = report.reporter_id === currentUserId;
+  const showIdentity = !report.is_anonymous && report.visibility_mode === 'visible';
+  
+  // Anonymiser l'affichage selon les règles
+  const displayName = (showIdentity || isOwner) && report.username
+    ? report.username
+    : 'Utilisateur anonyme';
+  
+  const displayAvatar = (showIdentity || isOwner) ? report.user_avatar : null;
+  const displayInitial = displayName === 'Utilisateur anonyme' ? 'A' : displayName.charAt(0).toUpperCase();
 
   return (
     <div className="card hover:shadow-lg transition-shadow">
@@ -47,6 +62,19 @@ export default function ReportCard({ report }: ReportCardProps) {
           >
             {report.category_icon} {report.category_name}
           </span>
+          
+          {/* ✅ Badge de visibilité */}
+          {report.visibility_mode === 'anonymous' ? (
+            <span className="badge bg-purple-100 text-purple-700 flex items-center space-x-1">
+              <Lock className="w-3 h-3" />
+              <span>Anonyme</span>
+            </span>
+          ) : (
+            <span className="badge bg-green-100 text-green-700 flex items-center space-x-1">
+              <Globe className="w-3 h-3" />
+              <span>Visible</span>
+            </span>
+          )}
         </div>
 
         <Link to={`/reports/${report.id}`}>
@@ -61,11 +89,20 @@ export default function ReportCard({ report }: ReportCardProps) {
 
         <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
           <div className="flex items-center space-x-2">
-            {/* Avatar anonyme */}
-            <div className="w-6 h-6 bg-gray-400 rounded-full flex items-center justify-center text-white text-xs">
-              A
-            </div>
+            {/* Avatar avec gestion de l'anonymat */}
+            {displayAvatar ? (
+              <img src={displayAvatar} alt="" className="w-6 h-6 rounded-full" />
+            ) : (
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-white text-xs ${
+                displayName === 'Utilisateur anonyme' ? 'bg-gray-400' : 'bg-red-600'
+              }`}>
+                {displayInitial}
+              </div>
+            )}
             <span>{displayName}</span>
+            {isOwner && (
+              <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded">Vous</span>
+            )}
           </div>
           
           {report.city_name && (

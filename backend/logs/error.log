@@ -2293,3 +2293,109 @@
 2026-04-18 11:18:31:1831 [31merror[39m: [31mQuery error:[39m
 2026-04-18 11:18:31:1831 [31merror[39m: [31mQuery error:[39m
 2026-04-18 11:18:31:1831 [31merror[39m: [31mQuery error:[39m
+2026-04-18 17:14:45:1445 [31merror[39m: [31mQuery error:[39m
+2026-04-18 17:14:45:1445 [31merror[39m: [31mCreate comment error: la colonne « user_id » n'existe pas[39m
+2026-04-18 17:14:47:1447 [31merror[39m: [31mQuery error:[39m
+2026-04-18 17:14:47:1447 [31merror[39m: [31mCreate comment error: la colonne « user_id » n'existe pas[39m
+2026-04-18 17:14:51:1451 [31merror[39m: [31mQuery error:[39m
+2026-04-18 17:14:51:1451 [31merror[39m: [31mCreate comment error: la colonne « user_id » n'existe pas[39m
+2026-04-18 17:14:52:1452 [31merror[39m: [31mQuery error:[39m
+2026-04-18 17:14:52:1452 [31merror[39m: [31mCreate comment error: la colonne « user_id » n'existe pas[39m
+2026-04-18 19:21:23:2123 [31merror[39m: [31mQuery error:[39m
+2026-04-18 19:21:23:2123 [31merror[39m: [31mAuthentication error: Connection terminated due to connection timeout[39m
+2026-04-19 18:52:41:5241 [31merror[39m: [31mQuery error:[39m
+2026-04-19 18:52:41:5241 [31merror[39m: [31mCreate report error: l'enregistrement « new » n'a pas de champs « user_id »[39m
+2026-04-19 18:52:43:5243 [31merror[39m: [31mQuery error:[39m
+2026-04-19 18:52:43:5243 [31merror[39m: [31mCreate report error: l'enregistrement « new » n'a pas de champs « user_id »[39m
+2026-04-20 07:42:37:4237 [31merror[39m: [31mQuery error:[39m
+2026-04-20 07:42:37:4237 [31merror[39m: [31mCreate report error: l'enregistrement « new » n'a pas de champs « user_id »[39m
+2026-04-20 07:42:43:4243 [31merror[39m: [31mQuery error:[39m
+2026-04-20 07:42:43:4243 [31merror[39m: [31mCreate report error: l'enregistrement « new » n'a pas de champs « user_id »[39m
+2026-04-20 07:42:46:4246 [31merror[39m: [31mQuery error:[39m
+2026-04-20 07:42:46:4246 [31merror[39m: [31mCreate report error: l'enregistrement « new » n'a pas de champs « user_id »[39m
+2026-04-20 07:42:52:4252 [31merror[39m: [31mQuery error:[39m
+2026-04-20 07:42:52:4252 [31merror[39m: [31mCreate report error: l'enregistrement « new » n'a pas de champs « user_id »[39m
+2026-04-20 07:48:28:4828 [31merror[39m: [31mQuery error:[39m
+2026-04-20 07:48:28:4828 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 07:50:01:501 [31merror[39m: [31mQuery error:[39m
+2026-04-20 07:50:01:501 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 07:52:00:520 [31merror[39m: [31mQuery error:[39m
+2026-04-20 07:52:00:520 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 07:54:00:540 [31merror[39m: [31mQuery error:[39m
+2026-04-20 07:54:01:541 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 07:56:01:561 [31merror[39m: [31mQuery error:[39m
+2026-04-20 07:56:01:561 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 08:00:00:00 [31merror[39m: [31mQuery error:[39m
+2026-04-20 08:00:00:00 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 08:02:01:21 [31merror[39m: [31mQuery error:[39m
+2026-04-20 08:02:01:21 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 08:06:00:60 [31merror[39m: [31mQuery error:[39m
+2026-04-20 08:06:00:60 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 08:08:00:80 [31merror[39m: [31mQuery error:[39m
+2026-04-20 08:08:00:80 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 08:10:01:101 [31merror[39m: [31mQuery error:[39m
+2026-04-20 08:10:01:101 [31merror[39m: [31m❌ AI Moderation error: la colonne r.user_id n'existe pas[39m
+2026-04-20 08:12:01:121 [31merror[39m: [31mQuery error:[39m
+2026-04-20 08:12:01:121 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 08:14:00:140 [31merror[39m: [31mQuery error:[39m
+2026-04-20 08:14:00:140 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 08:14:52:1452 [31merror[39m: [31mQuery error:[39m
+2026-04-20 08:14:52:1452 [31merror[39m: [31mLearn from manual moderation error: la colonne « moderated_by » de la relation « reports » n'existe pas[39m
+2026-04-20 09:13:24:1324 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:13:24:1324 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:14:00:140 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:14:00:140 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:16:01:161 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:16:01:161 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:18:01:181 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:18:01:181 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:20:01:201 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:20:01:201 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:22:00:220 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:22:00:220 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:24:01:241 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:24:01:241 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:26:01:261 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:26:01:261 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:28:00:280 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:28:00:280 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:30:04:304 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:30:05:305 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:32:02:322 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:32:02:322 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:34:01:341 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:34:01:341 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:36:01:361 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:36:01:361 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:38:01:381 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:38:01:381 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:40:01:401 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:40:01:401 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:42:00:420 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:42:00:420 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:44:01:441 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:44:01:441 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:46:01:461 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:46:01:461 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:48:00:480 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:48:00:480 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
+2026-04-20 09:50:01:501 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:50:01:501 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:50:01:501 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
+2026-04-20 09:52:01:521 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:52:01:521 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:52:01:521 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
+2026-04-20 09:54:01:541 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:54:01:541 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:54:01:541 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
+2026-04-20 09:56:00:560 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:56:00:560 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:56:00:560 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
+2026-04-20 09:58:00:580 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:58:00:580 [31merror[39m: [31mQuery error:[39m
+2026-04-20 09:58:00:580 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
+2026-04-20 10:00:00:00 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 10:00:01:01 [31merror[39m: [31mQuery error:[39m
+2026-04-20 10:00:01:01 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
+2026-04-20 10:02:02:22 [31merror[39m: [31mQuery error:[39m
+2026-04-20 10:02:02:22 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m

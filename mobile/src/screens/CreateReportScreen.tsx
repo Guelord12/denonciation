@@ -16,7 +16,7 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
-import { Camera, MapPin, Video, X, ChevronDown, Upload, FileText } from 'lucide-react-native';
+import { Camera, MapPin, Video, X, ChevronDown, Upload, FileText, Lock, Globe, AlertCircle, Shield, Eye, EyeOff, Send } from 'lucide-react-native';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
@@ -41,6 +41,8 @@ interface MediaFile {
   name: string;
 }
 
+type VisibilityMode = 'anonymous' | 'visible';
+
 export default function CreateReportScreen() {
   const navigation = useNavigation();
   const { user } = useAuthStore();
@@ -57,8 +59,11 @@ export default function CreateReportScreen() {
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // ✅ États pour la boîte de dialogue de visibilité
+  const [showVisibilityModal, setShowVisibilityModal] = useState(false);
+  const [visibilityMode, setVisibilityMode] = useState<VisibilityMode>('anonymous');
 
-  // ✅ Utilisation correcte de useQuery avec l'objet options
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: () => api.get('/categories').then(res => res.data),
@@ -72,16 +77,17 @@ export default function CreateReportScreen() {
   const categories: Category[] = categoriesData || [];
   const cities: City[] = citiesData || [];
 
-  // ✅ Mutation avec l'objet options
   const createReportMutation = useMutation({
     mutationFn: (formData: FormData) => api.post('/reports', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
     onSuccess: (response) => {
       Toast.show({ type: 'success', text1: 'Signalement créé avec succès !' });
+      setShowVisibilityModal(false);
       navigation.goBack();
     },
     onError: (error: any) => {
+      setIsSubmitting(false);
       Toast.show({ 
         type: 'error', 
         text1: 'Erreur', 
@@ -176,7 +182,8 @@ export default function CreateReportScreen() {
     setMedia(media.filter((_, i) => i !== index));
   };
 
-  const handleSubmit = async () => {
+  // ✅ ÉTAPE 1 : Vérifier le formulaire et ouvrir la boîte de dialogue
+  const handleSubmitClick = () => {
     if (!title.trim()) {
       Alert.alert('Erreur', 'Le titre est requis');
       scrollViewRef.current?.scrollTo({ y: 0, animated: true });
@@ -193,6 +200,12 @@ export default function CreateReportScreen() {
       return;
     }
 
+    // ✅ Ouvrir la boîte de dialogue de visibilité
+    setShowVisibilityModal(true);
+  };
+
+  // ✅ ÉTAPE 2 : Publier avec le mode choisi
+  const handleConfirmPublish = async () => {
     setIsSubmitting(true);
 
     try {
@@ -211,8 +224,11 @@ export default function CreateReportScreen() {
       }
       
       formData.append('is_live', isLive.toString());
+      
+      // ✅ Les champs qui impactent TOUT
+      formData.append('is_anonymous', String(visibilityMode === 'anonymous'));
+      formData.append('visibility_mode', visibilityMode);
 
-      // Ajouter les médias
       for (const file of media) {
         formData.append('media', {
           uri: file.uri,
@@ -224,7 +240,6 @@ export default function CreateReportScreen() {
       createReportMutation.mutate(formData);
     } catch (error) {
       Toast.show({ type: 'error', text1: 'Erreur', text2: 'Erreur lors de la préparation du signalement' });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -416,7 +431,7 @@ export default function CreateReportScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
-              onPress={handleSubmit}
+              onPress={handleSubmitClick}
               disabled={isSubmitting}
             >
               {isSubmitting ? (
@@ -506,6 +521,163 @@ export default function CreateReportScreen() {
                 </TouchableOpacity>
               )}
             />
+          </View>
+        </View>
+      </Modal>
+
+      {/* ✅ MODAL DE VISIBILITÉ - LE CHOIX QUI IMPACTE TOUT */}
+      <Modal
+        visible={showVisibilityModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowVisibilityModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.visibilityModalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <Shield size={24} color="#EF4444" />
+                <Text style={styles.modalTitle}>Choisissez votre mode de visibilité</Text>
+              </View>
+              <TouchableOpacity onPress={() => setShowVisibilityModal(false)}>
+                <X size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.visibilityModalBody} showsVerticalScrollIndicator={false}>
+              {/* Information IMPORTANTE */}
+              <View style={styles.visibilityImpactBox}>
+                <Shield size={20} color="#8B5CF6" />
+                <View style={styles.visibilityImpactContent}>
+                  <Text style={styles.visibilityImpactTitle}>
+                    ⚡ Votre choix s'appliquera à TOUTES les interactions
+                  </Text>
+                  <Text style={styles.visibilityImpactText}>
+                    • Si vous choisissez <Text style={styles.bold}>Anonyme</Text> : Tous les commentaires, likes, témoignages et partages seront <Text style={styles.bold}>anonymes</Text>
+                  </Text>
+                  <Text style={styles.visibilityImpactText}>
+                    • Si vous choisissez <Text style={styles.bold}>Visible</Text> : Tous les commentaires, likes, témoignages et partages seront <Text style={styles.bold}>visibles publiquement</Text>
+                  </Text>
+                  <Text style={styles.visibilityImpactWarning}>
+                    ⚠️ Ce choix est définitif pour ce signalement et toutes ses interactions.
+                  </Text>
+                </View>
+              </View>
+
+              {/* Option Anonyme */}
+              <TouchableOpacity
+                style={[
+                  styles.visibilityOption,
+                  visibilityMode === 'anonymous' && styles.visibilityOptionSelected,
+                  { borderColor: visibilityMode === 'anonymous' ? '#8B5CF6' : '#DDD' }
+                ]}
+                onPress={() => setVisibilityMode('anonymous')}
+              >
+                <View style={styles.visibilityOptionHeader}>
+                  <View style={[styles.visibilityIconLarge, { backgroundColor: '#8B5CF6' + '20' }]}>
+                    <EyeOff size={28} color="#8B5CF6" />
+                  </View>
+                  <View style={styles.visibilityOptionTitleContainer}>
+                    <Lock size={18} color="#8B5CF6" />
+                    <Text style={[styles.visibilityOptionTitleLarge, { color: '#8B5CF6' }]}>🔒 Mode Anonyme</Text>
+                  </View>
+                </View>
+                <Text style={styles.visibilityOptionDesc}>
+                  Votre identité sera masquée. Toutes les interactions seront anonymes.
+                </Text>
+                <View style={styles.visibilityDetailsBox}>
+                  <Text style={styles.visibilityDetailsTitle}>Ce qui sera anonyme :</Text>
+                  <Text style={styles.visibilityDetail}>✓ Votre nom d'utilisateur</Text>
+                  <Text style={styles.visibilityDetail}>✓ Les commentaires</Text>
+                  <Text style={styles.visibilityDetail}>✓ Les likes</Text>
+                  <Text style={styles.visibilityDetail}>✓ Les témoignages</Text>
+                  <Text style={styles.visibilityDetail}>✓ Les partages</Text>
+                </View>
+                {visibilityMode === 'anonymous' && (
+                  <View style={styles.selectedCheck}>
+                    <View style={styles.selectedCheckInner} />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Option Visible */}
+              <TouchableOpacity
+                style={[
+                  styles.visibilityOption,
+                  visibilityMode === 'visible' && styles.visibilityOptionSelected,
+                  { borderColor: visibilityMode === 'visible' ? '#10B981' : '#DDD' }
+                ]}
+                onPress={() => setVisibilityMode('visible')}
+              >
+                <View style={styles.visibilityOptionHeader}>
+                  <View style={[styles.visibilityIconLarge, { backgroundColor: '#10B981' + '20' }]}>
+                    <Eye size={28} color="#10B981" />
+                  </View>
+                  <View style={styles.visibilityOptionTitleContainer}>
+                    <Globe size={18} color="#10B981" />
+                    <Text style={[styles.visibilityOptionTitleLarge, { color: '#10B981' }]}>🌍 Mode Visible</Text>
+                  </View>
+                </View>
+                <Text style={styles.visibilityOptionDesc}>
+                  Votre identité sera publique. Toutes les interactions seront visibles.
+                </Text>
+                <View style={[styles.visibilityDetailsBox, { backgroundColor: '#10B981' + '10' }]}>
+                  <Text style={[styles.visibilityDetailsTitle, { color: '#065F46' }]}>Ce qui sera visible :</Text>
+                  <Text style={[styles.visibilityDetail, { color: '#065F46' }]}>✓ Votre nom d'utilisateur</Text>
+                  <Text style={[styles.visibilityDetail, { color: '#065F46' }]}>✓ Les commentaires</Text>
+                  <Text style={[styles.visibilityDetail, { color: '#065F46' }]}>✓ Les likes</Text>
+                  <Text style={[styles.visibilityDetail, { color: '#065F46' }]}>✓ Les témoignages</Text>
+                  <Text style={[styles.visibilityDetail, { color: '#065F46' }]}>✓ Les partages</Text>
+                </View>
+                {visibilityMode === 'visible' && (
+                  <View style={[styles.selectedCheck, { borderColor: '#10B981' }]}>
+                    <View style={[styles.selectedCheckInner, { backgroundColor: '#10B981' }]} />
+                  </View>
+                )}
+              </TouchableOpacity>
+
+              {/* Résumé */}
+              <View style={styles.summaryBox}>
+                <Text style={styles.summaryTitle}>Résumé de votre signalement</Text>
+                <Text style={styles.summaryText} numberOfLines={1}>Titre : {title}</Text>
+                <Text style={styles.summaryText} numberOfLines={2}>Description : {description}</Text>
+                <Text style={styles.summaryText}>Catégorie : {categories.find(c => c.id === categoryId)?.name || 'Non sélectionnée'}</Text>
+              </View>
+
+              {/* Avertissement */}
+              <View style={styles.finalWarning}>
+                <Text style={styles.finalWarningText}>
+                  ⚠️ En cliquant sur "Confirmer et publier", vous acceptez que votre signalement et toutes ses interactions suivent le mode de visibilité choisi. Ce choix est définitif.
+                </Text>
+              </View>
+            </ScrollView>
+
+            {/* Boutons */}
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowVisibilityModal(false)}
+              >
+                <Text style={styles.modalCancelButtonText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalConfirmButton,
+                  { backgroundColor: visibilityMode === 'anonymous' ? '#8B5CF6' : '#10B981' }
+                ]}
+                onPress={handleConfirmPublish}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <ActivityIndicator color="#FFF" />
+                ) : (
+                  <>
+                    <Send size={18} color="#FFF" />
+                    <Text style={styles.modalConfirmButtonText}>Confirmer et publier</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -762,6 +934,12 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     maxHeight: '70%',
   },
+  visibilityModalContent: {
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '85%',
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -770,10 +948,181 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#EEE',
   },
+  modalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#1F2937',
+  },
+  visibilityModalBody: {
+    padding: 16,
+  },
+  visibilityImpactBox: {
+    flexDirection: 'row',
+    backgroundColor: '#F3E8FF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    gap: 12,
+  },
+  visibilityImpactContent: {
+    flex: 1,
+  },
+  visibilityImpactTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#6B21A8',
+    marginBottom: 8,
+  },
+  visibilityImpactText: {
+    fontSize: 13,
+    color: '#6B21A8',
+    marginBottom: 4,
+  },
+  visibilityImpactWarning: {
+    fontSize: 12,
+    color: '#B45309',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  bold: {
+    fontWeight: 'bold',
+  },
+  visibilityOption: {
+    borderWidth: 2,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    position: 'relative',
+  },
+  visibilityOptionSelected: {
+    backgroundColor: '#F8FAFC',
+  },
+  visibilityOptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  visibilityIconLarge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  visibilityOptionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  visibilityOptionTitleLarge: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  visibilityOptionDesc: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+  },
+  visibilityDetailsBox: {
+    backgroundColor: '#8B5CF6' + '10',
+    borderRadius: 8,
+    padding: 12,
+  },
+  visibilityDetailsTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#6B21A8',
+    marginBottom: 8,
+  },
+  visibilityDetail: {
+    fontSize: 13,
+    color: '#6B21A8',
+    marginBottom: 2,
+  },
+  selectedCheck: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#8B5CF6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  selectedCheckInner: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#8B5CF6',
+  },
+  summaryBox: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 16,
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  summaryText: {
+    fontSize: 13,
+    color: '#666',
+    marginBottom: 4,
+  },
+  finalWarning: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+  },
+  finalWarningText: {
+    fontSize: 12,
+    color: '#92400E',
+    textAlign: 'center',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#EEE',
+    gap: 12,
+  },
+  modalCancelButton: {
+    flex: 1,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 8,
+  },
+  modalCancelButtonText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  modalConfirmButton: {
+    flex: 2,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  modalConfirmButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
   },
   modalItem: {
     flexDirection: 'row',

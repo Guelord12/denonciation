@@ -99,7 +99,7 @@ export const reportAPI = {
 // Comment API
 export const commentAPI = {
   getComments: (reportId: number, page = 1) =>
-    api.get(`/comments/report/${reportId}`, { params: { page } }),
+    api.get(`/reports/${reportId}/comments`, { params: { page } }),
   createComment: (reportId: number, content: string, parentId?: number) =>
     api.post('/comments', { report_id: reportId, content, parent_id: parentId }),
   updateComment: (id: number, content: string) =>
@@ -158,10 +158,10 @@ export const adminAPI = {
     api.get('/admin/reports', { params }),
   updateReportStatus: (reportId: number, status: string, reason?: string) =>
     api.patch(`/admin/reports/${reportId}/status`, { status, reason }),
-  getModerationReports: (params?: any) =>
+  getModerationReports: (params?: { page: number; limit: number; status?: string }) =>
     api.get('/admin/moderation', { params }),
-  resolveModerationReport: (reportId: number, resolution: string) =>
-    api.patch(`/admin/moderation/${reportId}/resolve`, { resolution }),
+  resolveModerationReport: (reportId: number, resolution: string, action?: string) =>
+    api.patch(`/admin/moderation/${reportId}/resolve`, { resolution, action }),
   getActivityLogs: (params?: any) =>
     api.get('/admin/logs', { params }),
   exportData: (type: string, startDate?: string, endDate?: string) =>
