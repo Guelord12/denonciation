@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Shield, Facebook, Twitter, Youtube, Mail, Github } from 'lucide-react';
+import { Shield, Facebook, Twitter, Youtube, Mail } from 'lucide-react';
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -17,6 +17,9 @@ export default function Footer() {
             <p className="text-gray-400 text-sm leading-relaxed">
               Plateforme citoyenne de signalement d'abus et d'injustices.
               Ensemble, luttons pour un monde plus juste.
+            </p>
+            <p className="text-gray-500 text-xs mt-2">
+              from G-Tech SARL
             </p>
           </div>
 
@@ -93,6 +96,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-red-500 transition"
+                aria-label="Facebook"
               >
                 <Facebook className="w-6 h-6" />
               </a>
@@ -101,6 +105,7 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-red-500 transition"
+                aria-label="Twitter"
               >
                 <Twitter className="w-6 h-6" />
               </a>
@@ -109,25 +114,18 @@ export default function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-red-500 transition"
+                aria-label="YouTube"
               >
                 <Youtube className="w-6 h-6" />
-              </a>
-              <a
-                href="https://github.com/denonciation"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-400 hover:text-red-500 transition"
-              >
-                <Github className="w-6 h-6" />
               </a>
             </div>
             <div className="flex items-center space-x-2 text-gray-400">
               <Mail className="w-4 h-4" />
               <a
-                href="mailto:contact@denonciation.com"
+                href="mailto:denonciation.world@gmail.com"
                 className="hover:text-red-500 transition"
               >
-                contact@denonciation.com
+                denonciation.world@gmail.com
               </a>
             </div>
           </div>
