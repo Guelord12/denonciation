@@ -22,7 +22,7 @@ import { api } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
 import useSocket from '../hooks/useSocket';
 import { 
-  Heart, Share2, Flag, Send, Users, X, Lock, MessageCircle,
+  Heart, Share2, Send, Users, X, Lock, MessageCircle,
   Camera as CameraIcon, RotateCcw, Mic, MicOff, Video as VideoIcon,
   VideoOff, MoreVertical, Wifi, WifiOff, RefreshCw, AlertTriangle,
 } from 'lucide-react-native';
@@ -30,8 +30,14 @@ import { formatDistance } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Toast from 'react-native-toast-message';
 import * as Sharing from 'expo-sharing';
-// ✅ IMPORT POUR WEBRTC
-import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, RTCView, MediaStream } from 'react-native-webrtc';
+import {
+  RTCPeerConnection,
+  RTCSessionDescription,
+  RTCIceCandidate,
+  RTCView,
+  MediaStream,
+  mediaDevices,
+} from 'react-native-webrtc';
 
 const { width, height } = Dimensions.get('window');
 
@@ -39,9 +45,10 @@ const { width, height } = Dimensions.get('window');
 // CONSTANTES
 // =====================================================
 const CONFIG = {
-  WEBRTC_CONNECTION_TIMEOUT: 30000, // 30 secondes
-  HEARTBEAT_INTERVAL: 10000, // 10 secondes
+  WEBRTC_CONNECTION_TIMEOUT: 30000,
+  HEARTBEAT_INTERVAL: 10000,
   MAX_RECONNECT_ATTEMPTS: 3,
+  STREAM_CHUNK_INTERVAL: 1000,
 };
 
 const ICE_SERVERS = [
@@ -49,7 +56,6 @@ const ICE_SERVERS = [
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
 
-// URL du serveur HLS (fallback)
 const HLS_SERVER_URL = 'http://192.168.176.90:8000/live';
 
 // =====================================================
@@ -104,9 +110,10 @@ export default function LiveStreamScreen() {
   const cameraRef = useRef<CameraView>(null);
   const chatListRef = useRef<FlatList>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
-  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const streamIntervalRef = useRef<NodeJS.Timeout | null>(null);
   
   // États du stream
   const [stream, setStream] = useState<StreamData | null>(null);
@@ -127,7 +134,7 @@ export default function LiveStreamScreen() {
     error: null,
   });
   
-  // ✅ NOUVEAUX ÉTATS POUR WEBRTC
+  // États WebRTC
   const [streamType, setStreamType] = useState<'hls' | 'webrtc' | 'unknown'>('unknown');
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'reconnecting'>('connecting');
   const [broadcasterReady, setBroadcasterReady] = useState(false);
@@ -143,6 +150,7 @@ export default function LiveStreamScreen() {
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
 
   // =====================================================
   // REQUÊTE PRINCIPALE
@@ -159,15 +167,13 @@ export default function LiveStreamScreen() {
       setIsStreamer(data.user_id === user?.id);
       setIsLoading(false);
       
-      // ✅ Détecter le type de flux
       if (data.hls_url) {
         setStreamType('hls');
         console.log('📺 Stream type: HLS');
       } else {
         setStreamType('webrtc');
         console.log('📡 Stream type: WebRTC');
-        // Initialiser WebRTC pour les spectateurs
-        if (!isStreamer) {
+        if (data.user_id !== user?.id) {
           initializeWebRTC();
         }
       }
@@ -205,7 +211,7 @@ export default function LiveStreamScreen() {
   });
 
   // =====================================================
-  // ✅ INITIALISATION WEBRTC (SPECTATEUR)
+  // ✅ CORRECTION : INITIALISATION WEBRTC (SPECTATEUR)
   // =====================================================
   const initializeWebRTC = useCallback(() => {
     if (!socket || !streamId || isStreamer) return;
@@ -214,24 +220,20 @@ export default function LiveStreamScreen() {
     setConnectionStatus('connecting');
     setBroadcasterReady(false);
     
-    // Rejoindre le stream
     socket.emit('join_stream', streamId);
     
-    // Timeout de connexion
     connectionTimeoutRef.current = setTimeout(() => {
       if (connectionStatus === 'connecting' && !broadcasterReady) {
         console.warn('⏰ WebRTC connection timeout');
         setConnectionStatus('disconnected');
-        setVideoStatus({ isLoaded: false, error: 'Délai de connexion dépassé' });
+        setVideoStatus({ isLoaded: false, error: 'Délai de connexion dépassé. Le streamer n\'a pas encore démarré.' });
       }
     }, CONFIG.WEBRTC_CONNECTION_TIMEOUT);
     
-    // Démarrer le heartbeat
     startHeartbeat();
     
   }, [socket, streamId, isStreamer, connectionStatus, broadcasterReady]);
 
-  // ✅ Créer une connexion peer WebRTC
   const createPeerConnection = useCallback(async (broadcasterId: string) => {
     try {
       console.log('🔗 Creating peer connection...');
@@ -240,7 +242,6 @@ export default function LiveStreamScreen() {
         iceServers: ICE_SERVERS,
       });
       
-      // Gérer les tracks entrants
       pc.ontrack = (event) => {
         console.log('🎥 Received remote track');
         if (event.streams && event.streams[0]) {
@@ -250,13 +251,12 @@ export default function LiveStreamScreen() {
         }
       };
       
-      // Gérer l'état de la connexion
       pc.onconnectionstatechange = () => {
-        console.log('📊 WebRTC connection state:', pc.connectionState);
-        
+        console.log('📊 WebRTC state:', pc.connectionState);
         switch (pc.connectionState) {
           case 'connected':
             setConnectionStatus('connected');
+            setVideoStatus({ isLoaded: true, error: null });
             break;
           case 'disconnected':
           case 'failed':
@@ -269,7 +269,6 @@ export default function LiveStreamScreen() {
         }
       };
       
-      // Gérer les candidats ICE
       pc.onicecandidate = (event) => {
         if (event.candidate && socket) {
           socket.emit('webrtc_ice_candidate', {
@@ -281,7 +280,6 @@ export default function LiveStreamScreen() {
       
       peerConnectionRef.current = pc;
       
-      // Envoyer le statut
       socket?.emit('webrtc_connection_status', {
         streamId,
         status: 'connecting',
@@ -294,11 +292,8 @@ export default function LiveStreamScreen() {
     }
   }, [socket, streamId]);
 
-  // ✅ Heartbeat
   const startHeartbeat = useCallback(() => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-    }
+    if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
     
     heartbeatIntervalRef.current = setInterval(() => {
       if (socket && socket.connected) {
@@ -309,10 +304,8 @@ export default function LiveStreamScreen() {
     }, CONFIG.HEARTBEAT_INTERVAL);
   }, [socket]);
 
-  // ✅ Tentative de reconnexion
   const attemptReconnect = useCallback(() => {
     if (reconnectAttemptsRef.current >= CONFIG.MAX_RECONNECT_ATTEMPTS) {
-      console.error('❌ Max reconnect attempts reached');
       setVideoStatus({ isLoaded: false, error: 'Impossible de se reconnecter' });
       return;
     }
@@ -321,9 +314,6 @@ export default function LiveStreamScreen() {
     setReconnectAttempts(reconnectAttemptsRef.current);
     setConnectionStatus('reconnecting');
     
-    console.log(`🔄 Reconnect attempt ${reconnectAttemptsRef.current}/${CONFIG.MAX_RECONNECT_ATTEMPTS}`);
-    
-    // Nettoyer l'ancienne connexion
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
@@ -336,7 +326,6 @@ export default function LiveStreamScreen() {
     }, 2000);
   }, [initializeWebRTC]);
 
-  // ✅ Reconnexion manuelle
   const handleManualReconnect = useCallback(() => {
     reconnectAttemptsRef.current = 0;
     setReconnectAttempts(0);
@@ -346,19 +335,146 @@ export default function LiveStreamScreen() {
   }, [initializeWebRTC]);
 
   // =====================================================
-  // WEBSOCKET (Chat et événements)
+  // ✅ CORRECTION : DÉMARRER LA DIFFUSION (STREAMER)
+  // =====================================================
+  const startBroadcasting = useCallback(async () => {
+    try {
+      setBroadcastError(null);
+      console.log('🎥 Starting broadcast...');
+      
+      // Récupérer le flux de la caméra via WebRTC
+      const stream = await mediaDevices.getUserMedia({
+        video: {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          facingMode: cameraType === 'front' ? 'user' : 'environment',
+          frameRate: 30,
+        },
+        audio: !isMuted,
+      });
+      
+      localStreamRef.current = stream;
+      console.log('✅ Local stream obtained');
+      
+      // Créer une connexion peer pour chaque spectateur
+      const pc = new RTCPeerConnection({
+        iceServers: ICE_SERVERS,
+      });
+      
+      // Ajouter toutes les tracks du flux local
+      stream.getTracks().forEach(track => {
+        if (pc && localStreamRef.current) {
+          pc.addTrack(track, localStreamRef.current);
+          console.log('➕ Track added:', track.kind);
+        }
+      });
+      
+      // Gérer les candidats ICE
+      pc.onicecandidate = (event) => {
+        if (event.candidate && socket) {
+          socket.emit('webrtc_ice_candidate', {
+            targetId: 'broadcaster',
+            candidate: event.candidate,
+          });
+          console.log('🧊 ICE candidate sent');
+        }
+      };
+      
+      // Gérer l'état de la connexion
+      pc.onconnectionstatechange = () => {
+        console.log('📊 Broadcaster PC state:', pc.connectionState);
+      };
+      
+      peerConnectionRef.current = pc;
+      
+      // Notifier le serveur que le broadcast démarre
+      socket?.emit('start_broadcast', { streamId, userId: user?.id });
+      
+      setIsBroadcasting(true);
+      setConnectionStatus('connected');
+      Toast.show({ type: 'success', text1: 'Diffusion en direct démarrée ! 🎥' });
+      
+      console.log('✅ Broadcast started successfully');
+      
+    } catch (error: any) {
+      console.error('❌ Broadcast error:', error);
+      setBroadcastError(error.message || 'Erreur lors du démarrage');
+      
+      if (error.message?.includes('permission')) {
+        Alert.alert(
+          'Permissions refusées',
+          'Autorisez l\'accès à la caméra et au micro dans les paramètres.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Toast.show({ type: 'error', text1: 'Erreur', text2: error.message || 'Erreur inconnue' });
+      }
+    }
+  }, [cameraType, isMuted, socket, streamId, user]);
+
+  const stopBroadcasting = useCallback(() => {
+    console.log('🛑 Stopping broadcast...');
+    
+    // Arrêter les tracks locales
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log('⏹️ Track stopped:', track.kind);
+      });
+      localStreamRef.current = null;
+    }
+    
+    // Fermer la connexion peer
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    
+    // Arrêter l'intervalle de stream
+    if (streamIntervalRef.current) {
+      clearInterval(streamIntervalRef.current);
+      streamIntervalRef.current = null;
+    }
+    
+    socket?.emit('end_broadcast', { streamId });
+    
+    setIsBroadcasting(false);
+    setConnectionStatus('disconnected');
+    setBroadcastError(null);
+    
+    console.log('✅ Broadcast stopped');
+  }, [socket, streamId]);
+
+  const toggleVideo = useCallback(() => {
+    if (localStreamRef.current) {
+      const videoTrack = localStreamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !isVideoEnabled;
+        setIsVideoEnabled(!isVideoEnabled);
+      }
+    }
+  }, [isVideoEnabled]);
+
+  const toggleAudio = useCallback(() => {
+    if (localStreamRef.current) {
+      const audioTrack = localStreamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !isMuted;
+        setIsMuted(!isMuted);
+      }
+    }
+  }, [isMuted]);
+
+  // =====================================================
+  // WEBSOCKET
   // =====================================================
   useEffect(() => {
     if (!socket || !streamId) return;
 
-    console.log('📡 Setting up socket listeners for stream:', streamId);
-    
     socket.emit('join_stream', streamId);
 
-    // ✅ Événements WebRTC
     socket.on('broadcaster_ready', (data: { streamId: string; broadcasterId: string }) => {
       if (data.streamId === streamId) {
-        console.log('🎬 Broadcaster ready:', data.broadcasterId);
         setBroadcasterReady(true);
         setConnectionStatus('connected');
       }
@@ -378,15 +494,12 @@ export default function LiveStreamScreen() {
       console.log('📡 Received WebRTC offer from:', data.socketId);
       
       try {
-        if (connectionTimeoutRef.current) {
-          clearTimeout(connectionTimeoutRef.current);
-        }
+        if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
         
         const pc = await createPeerConnection(data.socketId);
         if (!pc) return;
         
         await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-        
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         
@@ -412,7 +525,6 @@ export default function LiveStreamScreen() {
       }
     });
 
-    // Événements standards
     socket.on('viewer_count_update', (data: { streamId: string; count: number }) => {
       if (data.streamId === streamId) setViewerCount(data.count);
     });
@@ -431,8 +543,27 @@ export default function LiveStreamScreen() {
 
     socket.on('viewers_list', (data: { viewers: Viewer[] }) => setViewers(data.viewers));
 
+    // ✅ NOUVEAU : Événement pour que le streamer envoie son offre WebRTC
+    socket.on('spectator_joined', async (data: { spectatorId: string }) => {
+      if (isStreamer && isBroadcasting && peerConnectionRef.current && localStreamRef.current) {
+        console.log('👤 Spectator joined, sending offer to:', data.spectatorId);
+        try {
+          const offer = await peerConnectionRef.current.createOffer();
+          await peerConnectionRef.current.setLocalDescription(offer);
+          
+          socket.emit('webrtc_offer', {
+            streamId,
+            targetId: data.spectatorId,
+            offer: offer,
+          });
+          console.log('✅ Offer sent to spectator');
+        } catch (error) {
+          console.error('Failed to send offer:', error);
+        }
+      }
+    });
+
     return () => {
-      console.log('🧹 Cleaning up socket listeners');
       socket.emit('leave_stream', streamId);
       socket.off('broadcaster_ready');
       socket.off('stream_status');
@@ -444,24 +575,23 @@ export default function LiveStreamScreen() {
       socket.off('like_update');
       socket.off('stream_ended');
       socket.off('viewers_list');
+      socket.off('spectator_joined');
       
-      // Nettoyer WebRTC
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
         peerConnectionRef.current = null;
       }
       
-      if (heartbeatIntervalRef.current) {
-        clearInterval(heartbeatIntervalRef.current);
-        heartbeatIntervalRef.current = null;
+      if (localStreamRef.current) {
+        localStreamRef.current.getTracks().forEach(t => t.stop());
+        localStreamRef.current = null;
       }
       
-      if (connectionTimeoutRef.current) {
-        clearTimeout(connectionTimeoutRef.current);
-        connectionTimeoutRef.current = null;
-      }
+      if (heartbeatIntervalRef.current) clearInterval(heartbeatIntervalRef.current);
+      if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
+      if (streamIntervalRef.current) clearInterval(streamIntervalRef.current);
     };
-  }, [socket, streamId, createPeerConnection, navigation]);
+  }, [socket, streamId, createPeerConnection, navigation, isStreamer, isBroadcasting]);
 
   // =====================================================
   // PERMISSIONS CAMÉRA (STREAMER)
@@ -469,27 +599,23 @@ export default function LiveStreamScreen() {
   useEffect(() => {
     if (isStreamer) {
       (async () => {
-        const { status } = await Camera.requestCameraPermissionsAsync();
-        const { status: audioStatus } = await Camera.requestMicrophonePermissionsAsync();
-        setHasPermission(status === 'granted' && audioStatus === 'granted');
+        const { status: camStatus } = await Camera.requestCameraPermissionsAsync();
+        const { status: micStatus } = await Camera.requestMicrophonePermissionsAsync();
+        setHasPermission(camStatus === 'granted' && micStatus === 'granted');
       })();
     }
   }, [isStreamer]);
 
-  // =====================================================
-  // FONCTIONS STREAMER
-  // =====================================================
-  const startBroadcasting = () => {
-    setIsBroadcasting(true);
-    socket?.emit('start_broadcast', { streamId });
-    Toast.show({ type: 'success', text1: 'Diffusion en direct démarrée !' });
-  };
+  // Nettoyage à la fermeture
+  useEffect(() => {
+    return () => {
+      if (isBroadcasting) stopBroadcasting();
+    };
+  }, []);
 
-  const stopBroadcasting = () => {
-    setIsBroadcasting(false);
-    socket?.emit('end_broadcast', { streamId });
-  };
-
+  // =====================================================
+  // FONCTIONS CHAT
+  // =====================================================
   const sendMessage = () => {
     if (!inputMessage.trim()) return;
     socket?.emit('chat_message', { streamId, message: inputMessage.trim() });
@@ -543,21 +669,19 @@ export default function LiveStreamScreen() {
   };
 
   // =====================================================
-  // RENDU
+  // RENDU - INDICATEUR DE CONNEXION
   // =====================================================
-  
-  // ✅ Composant indicateur de connexion
   const renderConnectionIndicator = () => {
     if (isStreamer || streamType === 'hls') return null;
     
-    const statusConfig = {
+    const statusConfig: Record<string, { icon: any; color: string; text: string }> = {
       connecting: { icon: Wifi, color: '#FBBF24', text: 'Connexion...' },
       connected: { icon: Wifi, color: '#10B981', text: 'Connecté' },
       reconnecting: { icon: RefreshCw, color: '#FBBF24', text: `Reconnexion ${reconnectAttempts}/${CONFIG.MAX_RECONNECT_ATTEMPTS}` },
       disconnected: { icon: WifiOff, color: '#EF4444', text: 'Déconnecté' },
     };
     
-    const config = statusConfig[connectionStatus];
+    const config = statusConfig[connectionStatus] || statusConfig.connecting;
     const Icon = config.icon;
     
     return (
@@ -573,9 +697,11 @@ export default function LiveStreamScreen() {
     );
   };
 
-  // URL HLS (fallback)
   const hlsUrl = stream?.stream_key ? `${HLS_SERVER_URL}/${stream.stream_key}/index.m3u8` : null;
 
+  // =====================================================
+  // RENDU PRINCIPAL
+  // =====================================================
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -618,36 +744,43 @@ export default function LiveStreamScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.videoContainer}>
-        {/* ✅ CAS 1 : Streamer avec caméra */}
+        {/* Streamer avec caméra */}
         {isStreamer && hasPermission ? (
-          <CameraView
-            ref={cameraRef}
-            style={styles.camera}
-            facing={cameraType}
-            enableTorch={flashMode === 'on'}
-            mode="video"
-            mute={isMuted}
-          >
+          <>
+            <CameraView
+              ref={cameraRef}
+              style={styles.camera}
+              facing={cameraType}
+              enableTorch={flashMode === 'on'}
+              mode="video"
+              mute={isMuted}
+            />
             {!isVideoEnabled && (
               <View style={styles.videoDisabledOverlay}>
                 <VideoOff size={48} color="#FFF" />
                 <Text style={styles.videoDisabledText}>Caméra désactivée</Text>
               </View>
             )}
-          </CameraView>
+            {/* ✅ Message d'erreur broadcast */}
+            {broadcastError && (
+              <View style={styles.broadcastError}>
+                <AlertTriangle size={20} color="#FFF" />
+                <Text style={styles.broadcastErrorText}>{broadcastError}</Text>
+              </View>
+            )}
+          </>
         ) : null}
 
-        {/* ✅ CAS 2 : WebRTC (stream distant) */}
+        {/* WebRTC (spectateur) */}
         {!isStreamer && streamType === 'webrtc' && remoteStream ? (
           <RTCView
             streamURL={remoteStream.toURL()}
             style={styles.video}
             objectFit="contain"
-            mirror={false}
           />
         ) : null}
 
-        {/* ✅ CAS 3 : HLS (fallback) */}
+        {/* HLS (fallback) */}
         {!isStreamer && streamType === 'hls' && hlsUrl ? (
           <>
             {!videoStatus.isLoaded && !videoStatus.error && (
@@ -665,12 +798,10 @@ export default function LiveStreamScreen() {
               isLooping={false}
               useNativeControls={false}
               onLoad={() => {
-                console.log('✅ Video loaded');
                 setVideoStatus({ isLoaded: true, error: null });
                 setConnectionStatus('connected');
               }}
               onError={(error) => {
-                console.error('❌ Video error:', error);
                 setVideoStatus({ isLoaded: false, error: 'Erreur de lecture' });
                 setConnectionStatus('disconnected');
               }}
@@ -678,12 +809,15 @@ export default function LiveStreamScreen() {
           </>
         ) : null}
 
-        {/* ✅ CAS 4 : En attente de connexion WebRTC */}
+        {/* En attente de connexion WebRTC */}
         {!isStreamer && streamType === 'webrtc' && !remoteStream && (
           <View style={styles.waitingContainer}>
             <ActivityIndicator size="large" color="#EF4444" />
             <Text style={styles.waitingText}>
-              {connectionStatus === 'connecting' ? 'Connexion au streamer...' : 'En attente du stream...'}
+              {connectionStatus === 'connecting' ? 'Connexion au streamer...' : 'En attente du streamer...'}
+            </Text>
+            <Text style={styles.waitingSubtext}>
+              Le streamer doit démarrer sa diffusion
             </Text>
             {connectionStatus === 'disconnected' && (
               <TouchableOpacity style={styles.retryButton} onPress={handleManualReconnect}>
@@ -694,7 +828,7 @@ export default function LiveStreamScreen() {
           </View>
         )}
 
-        {/* ✅ Message d'erreur vidéo */}
+        {/* Erreur vidéo */}
         {videoStatus.error && (
           <View style={styles.errorOverlay}>
             <AlertTriangle size={32} color="#FBBF24" />
@@ -714,7 +848,6 @@ export default function LiveStreamScreen() {
           <View style={styles.streamInfo}>
             <Text style={styles.streamTitle} numberOfLines={1}>{stream?.title}</Text>
             <Text style={styles.streamerName}>@{stream?.username}</Text>
-            {/* ✅ Indicateur de connexion */}
             {renderConnectionIndicator()}
           </View>
           <View style={styles.headerActions}>
@@ -739,10 +872,10 @@ export default function LiveStreamScreen() {
         {/* Contrôles streamer */}
         {isStreamer && isBroadcasting && (
           <View style={styles.streamerControls}>
-            <TouchableOpacity style={[styles.controlButton, !isVideoEnabled && styles.controlButtonActive]} onPress={() => setIsVideoEnabled(!isVideoEnabled)}>
+            <TouchableOpacity style={[styles.controlButton, !isVideoEnabled && styles.controlButtonActive]} onPress={toggleVideo}>
               {isVideoEnabled ? <VideoIcon size={22} color="#FFF" /> : <VideoOff size={22} color="#EF4444" />}
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.controlButton, isMuted && styles.controlButtonActive]} onPress={() => setIsMuted(!isMuted)}>
+            <TouchableOpacity style={[styles.controlButton, isMuted && styles.controlButtonActive]} onPress={toggleAudio}>
               {isMuted ? <MicOff size={22} color="#EF4444" /> : <Mic size={22} color="#FFF" />}
             </TouchableOpacity>
             <TouchableOpacity style={styles.controlButton} onPress={() => setCameraType(c => c === 'back' ? 'front' : 'back')}>
@@ -754,7 +887,7 @@ export default function LiveStreamScreen() {
           </View>
         )}
 
-        {/* Bouton démarrer diffusion */}
+        {/* ✅ Bouton démarrer diffusion CORRIGÉ */}
         {isStreamer && !isBroadcasting && (
           <TouchableOpacity style={styles.startStreamButton} onPress={startBroadcasting}>
             <VideoIcon size={24} color="#FFF" />
@@ -814,7 +947,7 @@ export default function LiveStreamScreen() {
         </KeyboardAvoidingView>
       )}
 
-      {/* Actions (Like, Share) */}
+      {/* Actions */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
           <Heart size={32} color={isLiked ? '#EF4444' : '#FFF'} fill={isLiked ? '#EF4444' : 'none'} />
@@ -885,8 +1018,11 @@ const styles = StyleSheet.create({
   camera: { ...StyleSheet.absoluteFillObject },
   videoDisabledOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
   videoDisabledText: { color: '#FFF', marginTop: 12, fontSize: 16 },
-  waitingContainer: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1F2937' },
-  waitingText: { color: '#FFF', marginTop: 12, fontSize: 16 },
+  broadcastError: { position: 'absolute', top: 100, left: 20, right: 20, backgroundColor: 'rgba(239,68,68,0.9)', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, zIndex: 10 },
+  broadcastErrorText: { color: '#FFF', fontSize: 14, flex: 1 },
+  waitingContainer: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1F2937', padding: 20 },
+  waitingText: { color: '#FFF', marginTop: 12, fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  waitingSubtext: { color: '#999', marginTop: 8, fontSize: 14, textAlign: 'center' },
   errorOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 10 },
   errorText: { color: '#FFF', marginTop: 12, fontSize: 14, textAlign: 'center', paddingHorizontal: 20 },
   retryButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EF4444', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 25, marginTop: 20, gap: 8 },
