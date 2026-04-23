@@ -12,7 +12,7 @@ import {
   MessageCircle, Video as VideoIcon, VideoOff, Mic, MicOff,
   Camera, Monitor, Settings, Maximize2, Minimize2, Volume2, VolumeX,
   Play, Pause, Gift, Star, Link as LinkIcon, Twitter, Facebook,
-  AlertTriangle, CheckCircle, Clock, Calendar, Crown, Wifi, WifiOff,
+  AlertTriangle, Clock, Calendar, Crown, Wifi, WifiOff,
   RefreshCw,
 } from 'lucide-react';
 import { formatDistance } from 'date-fns';
@@ -56,13 +56,9 @@ interface VideoFilter {
 // =====================================================
 
 const CONFIG = {
-  // Délai maximum de connexion WebRTC (30 secondes)
   WEBRTC_CONNECTION_TIMEOUT: 30000,
-  // Intervalle de heartbeat (10 secondes)
   HEARTBEAT_INTERVAL: 10000,
-  // Délai avant de considérer la connexion comme perdue
   CONNECTION_LOST_TIMEOUT: 15000,
-  // Nombre maximum de tentatives de reconnexion
   MAX_RECONNECT_ATTEMPTS: 3,
 };
 
@@ -74,6 +70,23 @@ const VIDEO_FILTERS: VideoFilter[] = [
   { id: 'cool', name: 'Froid', type: 'color', config: { temperature: 0.8 } },
   { id: 'vintage', name: 'Vintage', type: 'effect', config: { sepia: 0.5 } },
 ];
+
+// =====================================================
+// ✅ FONCTION UTILITAIRE : Obtenir l'ID utilisateur courant
+// =====================================================
+function getCurrentUserId(): number | undefined {
+  // Essayer depuis le store Zustand
+  const storeUser = useAuthStore.getState().user;
+  if (storeUser?.id) return storeUser.id;
+  
+  // Fallback : lire depuis le localStorage
+  try {
+    const authData = JSON.parse(localStorage.getItem('auth-storage') || '{}');
+    return authData?.state?.user?.id;
+  } catch {
+    return undefined;
+  }
+}
 
 // =====================================================
 // COMPOSANT PRINCIPAL
@@ -107,7 +120,7 @@ export default function LiveStreamDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [videoError, setVideoError] = useState<string | null>(null);
   
-  // ✅ AMÉLIORATION : États de connexion
+  // États de connexion
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'reconnecting'>('connecting');
   const [streamType, setStreamType] = useState<'hls' | 'webrtc' | 'unknown'>('unknown');
   const [broadcasterReady, setBroadcasterReady] = useState(false);
@@ -150,7 +163,6 @@ export default function LiveStreamDetail() {
   // Hook PiP
   const { isPiPActive, requestPiP, exitPiP } = usePictureInPicture(videoRef);
   
-  // Timer pour les contrôles
   let controlsTimeout: NodeJS.Timeout;
   
   // =====================================================
@@ -166,16 +178,21 @@ export default function LiveStreamDetail() {
       setLikeCount(data.like_count || 0);
       setHasAccess(data.hasAccess !== false);
       setMessages(data.messages || []);
-      setIsStreamer(data.user_id === user?.id);
+      
+      // ✅ CORRECTION : Utiliser getCurrentUserId() comme fallback
+      const currentUserId = user?.id || getCurrentUserId();
+      console.log('🔑 Current user ID:', currentUserId, 'Stream owner ID:', data.user_id);
+      setIsStreamer(data.user_id === currentUserId);
+      
       setIsLoading(false);
       
-      // ✅ AMÉLIORATION : Détecter le type de flux
       if (data.hls_url) {
         setStreamType('hls');
       } else {
         setStreamType('webrtc');
-        // Initialiser WebRTC
-        initializeWebRTC();
+        if (data.user_id !== currentUserId) {
+          initializeWebRTC();
+        }
       }
     },
     onError: () => {
@@ -230,7 +247,7 @@ export default function LiveStreamDetail() {
   });
   
   // =====================================================
-  // ✅ AMÉLIORATION : INITIALISATION WEBRTC
+  // INITIALISATION WEBRTC
   // =====================================================
   
   const initializeWebRTC = useCallback(() => {
@@ -247,11 +264,9 @@ export default function LiveStreamDetail() {
       return;
     }
     
-    // Rejoindre le stream
     socket.emit('join_stream', id);
     console.log('📺 Joined stream:', id);
     
-    // Écouter le statut du streamer
     socket.on('broadcaster_ready', (data: { streamId: string; broadcasterId: string }) => {
       if (data.streamId === id) {
         console.log('🎬 Broadcaster ready:', data.broadcasterId);
@@ -277,28 +292,22 @@ export default function LiveStreamDetail() {
       toast.error(data.message, { icon: '⚠️' });
     });
     
-    // Écouter l'offre WebRTC
     socket.on('webrtc_offer', async (data: { socketId: string; offer: RTCSessionDescriptionInit }) => {
       console.log('📡 Received WebRTC offer from:', data.socketId);
       
       try {
-        // Annuler le timeout de connexion
         if (connectionTimeoutRef.current) {
           clearTimeout(connectionTimeoutRef.current);
         }
         
-        // Créer la connexion peer
         await createPeerConnection(data.socketId);
         
-        // Appliquer l'offre
         if (peerConnectionRef.current) {
           await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(data.offer));
           
-          // Créer la réponse
           const answer = await peerConnectionRef.current.createAnswer();
           await peerConnectionRef.current.setLocalDescription(answer);
           
-          // Envoyer la réponse
           socket.emit('webrtc_answer', {
             targetId: data.socketId,
             answer: answer,
@@ -314,7 +323,6 @@ export default function LiveStreamDetail() {
       }
     });
     
-    // Écouter les candidats ICE
     socket.on('webrtc_ice_candidate', async (data: { socketId: string; candidate: RTCIceCandidateInit }) => {
       try {
         if (peerConnectionRef.current && data.candidate) {
@@ -325,10 +333,8 @@ export default function LiveStreamDetail() {
       }
     });
     
-    // Démarrer le heartbeat
     startHeartbeat();
     
-    // Timeout de connexion
     connectionTimeoutRef.current = setTimeout(() => {
       if (connectionStatus === 'connecting' && !broadcasterReady) {
         console.warn('⏰ WebRTC connection timeout');
@@ -340,7 +346,6 @@ export default function LiveStreamDetail() {
     
   }, [id, isStreamer, connectionStatus, broadcasterReady]);
   
-  // ✅ AMÉLIORATION : Créer une connexion peer WebRTC
   const createPeerConnection = useCallback(async (broadcasterId: string) => {
     const configuration: RTCConfiguration = {
       iceServers: [
@@ -351,7 +356,6 @@ export default function LiveStreamDetail() {
     
     const pc = new RTCPeerConnection(configuration);
     
-    // Gérer les tracks entrants
     pc.ontrack = (event) => {
       console.log('🎥 Received remote track');
       if (videoRef.current && event.streams[0]) {
@@ -362,7 +366,6 @@ export default function LiveStreamDetail() {
       }
     };
     
-    // Gérer l'état de la connexion
     pc.onconnectionstatechange = () => {
       console.log('📊 WebRTC connection state:', pc.connectionState);
       
@@ -385,7 +388,6 @@ export default function LiveStreamDetail() {
       }
     };
     
-    // Gérer les candidats ICE
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         const socket = socketService.getSocket();
@@ -396,14 +398,12 @@ export default function LiveStreamDetail() {
       }
     };
     
-    // Gérer la négociation
     pc.onnegotiationneeded = async () => {
       console.log('🔄 WebRTC negotiation needed');
     };
     
     peerConnectionRef.current = pc;
     
-    // ✅ AMÉLIORATION : Envoyer le statut de connexion
     const socket = socketService.getSocket();
     socket?.emit('webrtc_connection_status', {
       streamId: id,
@@ -412,7 +412,6 @@ export default function LiveStreamDetail() {
     
   }, [id]);
   
-  // ✅ AMÉLIORATION : Heartbeat pour maintenir la connexion
   const startHeartbeat = useCallback(() => {
     if (heartbeatIntervalRef.current) {
       clearInterval(heartbeatIntervalRef.current);
@@ -423,14 +422,12 @@ export default function LiveStreamDetail() {
       if (socket && socket.connected) {
         socket.emit('heartbeat');
       } else {
-        // Socket déconnecté
         setConnectionStatus('disconnected');
         attemptReconnect();
       }
     }, CONFIG.HEARTBEAT_INTERVAL);
   }, []);
   
-  // ✅ AMÉLIORATION : Tentative de reconnexion
   const attemptReconnect = useCallback(() => {
     if (reconnectAttemptsRef.current >= CONFIG.MAX_RECONNECT_ATTEMPTS) {
       console.error('❌ Max reconnect attempts reached');
@@ -444,19 +441,16 @@ export default function LiveStreamDetail() {
     
     console.log(`🔄 Reconnect attempt ${reconnectAttemptsRef.current}/${CONFIG.MAX_RECONNECT_ATTEMPTS}`);
     
-    // Nettoyer l'ancienne connexion
     if (peerConnectionRef.current) {
       peerConnectionRef.current.close();
       peerConnectionRef.current = null;
     }
     
-    // Réinitialiser
     setTimeout(() => {
       initializeWebRTC();
     }, 2000);
   }, [initializeWebRTC]);
   
-  // ✅ AMÉLIORATION : Reconnexion manuelle
   const handleManualReconnect = () => {
     reconnectAttemptsRef.current = 0;
     setReconnectAttempts(0);
@@ -560,7 +554,6 @@ export default function LiveStreamDetail() {
       socket.off('webrtc_offer');
       socket.off('webrtc_ice_candidate');
       
-      // Nettoyer WebRTC
       if (peerConnectionRef.current) {
         peerConnectionRef.current.close();
         peerConnectionRef.current = null;
@@ -873,11 +866,10 @@ export default function LiveStreamDetail() {
   // RENDU
   // =====================================================
   
-  // ✅ AMÉLIORATION : Rendu de l'indicateur de connexion
   const renderConnectionIndicator = () => {
     if (isStreamer) return null;
     
-    const statusConfig = {
+    const statusConfig: Record<string, { icon: any; color: string; text: string }> = {
       connecting: { icon: Wifi, color: 'text-yellow-500', text: 'Connexion...' },
       connected: { icon: Wifi, color: 'text-green-500', text: 'Connecté' },
       reconnecting: { icon: RefreshCw, color: 'text-yellow-500', text: `Reconnexion ${reconnectAttempts}/${CONFIG.MAX_RECONNECT_ATTEMPTS}` },
@@ -1027,7 +1019,7 @@ export default function LiveStreamDetail() {
           <span className="text-sm ml-2">{viewerCount}</span>
         </div>
         
-        {/* ✅ AMÉLIORATION : Indicateur de connexion */}
+        {/* Indicateur de connexion */}
         {!isStreamer && (
           <div className="absolute top-4 left-32">
             {renderConnectionIndicator()}
@@ -1040,7 +1032,7 @@ export default function LiveStreamDetail() {
           <p className="text-sm text-gray-300">@{stream?.username}</p>
         </div>
         
-        {/* ✅ AMÉLIORATION : Message d'attente WebRTC */}
+        {/* Message d'attente WebRTC */}
         {!isStreamer && streamType === 'webrtc' && connectionStatus === 'connecting' && !broadcasterReady && (
           <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-black/70 backdrop-blur-sm rounded-lg px-6 py-3 text-white">
             <div className="flex items-center gap-3">
@@ -1473,7 +1465,7 @@ export default function LiveStreamDetail() {
               </div>
             )}
             
-            {/* ✅ AMÉLIORATION : État de connexion dans les paramètres */}
+            {/* État de connexion dans les paramètres */}
             {!isStreamer && (
               <div className="mt-4 pt-4 border-t">
                 <p className="text-sm font-medium mb-2">État de la connexion</p>
