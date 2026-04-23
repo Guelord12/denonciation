@@ -27,10 +27,9 @@ export default function About() {
   ];
 
   const team = [
-    { name: 'Jean Mutombo', role: 'Fondateur & CEO', image: null },
-    { name: 'Marie Kabila', role: 'Directrice des opérations', image: null },
-    { name: 'Pierre Lumbi', role: 'Responsable technique', image: null },
-    { name: 'Sophie Mboyo', role: 'Responsable juridique', image: null },
+    { name: 'Guelord KAYAYA', role: 'Fondateur & CEO', image: null },
+    { name: 'Michel KALEMBA', role: 'Directeur des opérations', image: null },
+    { name: 'John Biselele', role: 'Responsable juridique', image: null },
   ];
 
   return (
@@ -142,7 +141,7 @@ export default function About() {
           Notre équipe est là pour vous aider
         </p>
         <a
-          href="mailto:contact@denonciation.com"
+          href="denonciation.world@gmail.com"
           className="btn-primary inline-flex items-center space-x-2"
         >
           <span>Nous contacter</span>

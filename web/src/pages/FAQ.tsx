@@ -164,7 +164,7 @@ export default function FAQ() {
           Notre équipe de support est disponible pour vous aider.
         </p>
         <a
-          href="mailto:support@denonciation.com"
+          href="denonciation.world@gmail.com"
           className="inline-block bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
         >
           Contacter le support

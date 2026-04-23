@@ -124,7 +124,7 @@ export default function Privacy() {
           <p>
             Pour toute question concernant cette politique ou vos données personnelles :
             <br />
-            <a href="mailto:privacy@denonciation.com" className="text-red-600 hover:underline">
+            <a href="denonciation.world@gmail.com" className="text-red-600 hover:underline">
               privacy@denonciation.com
             </a>
           </p>

@@ -71,8 +71,8 @@ export default function Contact() {
             <Mail className="w-6 h-6 text-red-600" />
           </div>
           <h3 className="font-semibold mb-1">Email</h3>
-          <p className="text-gray-600">contact@denonciation.com</p>
-          <p className="text-gray-600">support@denonciation.com</p>
+          <p className="text-gray-600">denonciation.world@gmail.com</p>
+          <p className="text-gray-600">denonciation.world@gmail.com</p>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6 text-center">
@@ -89,7 +89,7 @@ export default function Contact() {
             <MapPin className="w-6 h-6 text-red-600" />
           </div>
           <h3 className="font-semibold mb-1">Adresse</h3>
-          <p className="text-gray-600">123 Avenue de la Justice</p>
+          <p className="text-gray-600">29 Bis, Avenue Kitona</p>
           <p className="text-gray-600">Kinshasa, RDC</p>
         </div>
       </div>

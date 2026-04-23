@@ -102,7 +102,7 @@ export default function Terms() {
           <p>
             Pour toute question concernant ces conditions, veuillez nous contacter à :
             <br />
-            <a href="mailto:legal@denonciation.com" className="text-red-600 hover:underline">
+            <a href="denonciation.world@gmail.com" className="text-red-600 hover:underline">
               legal@denonciation.com
             </a>
           </p>
