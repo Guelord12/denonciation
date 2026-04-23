@@ -2,23 +2,30 @@ import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// ✅ IP de la machine
-const YOUR_PC_IP = '192.168.131.90';
+// ✅ IP du serveur AWS en production, IP locale en développement
+const DEV_SERVER_IP = '192.168.131.90';
+const PROD_SERVER_IP = '16.171.39.76';
+const SERVER_PORT = '5000';
 
 const getBaseUrl = () => {
   if (__DEV__) {
     console.log('📱 Platform:', Platform.OS);
+    console.log('📡 Development Mode - Using local server');
     
     const url = Platform.select({
-      ios: `http://${YOUR_PC_IP}:5000/api`,
-      android: `http://${YOUR_PC_IP}:5000/api`,
-      default: `http://${YOUR_PC_IP}:5000/api`,
+      ios: `http://${DEV_SERVER_IP}:${SERVER_PORT}/api`,
+      android: `http://${DEV_SERVER_IP}:${SERVER_PORT}/api`,
+      default: `http://${DEV_SERVER_IP}:${SERVER_PORT}/api`,
     });
     
     console.log('🌐 API Base URL:', url);
     return url;
   }
-  return 'https://api.denonciation.com/api';
+  
+  // ✅ PRODUCTION : Utiliser le serveur AWS
+  const prodUrl = `http://${PROD_SERVER_IP}:${SERVER_PORT}/api`;
+  console.log('🌐 Production API Base URL:', prodUrl);
+  return prodUrl;
 };
 
 const BASE_URL = getBaseUrl();
@@ -58,10 +65,10 @@ api.interceptors.response.use(
       console.error('❌ Network Error - Backend inaccessible');
       console.error('   URL:', originalRequest?.baseURL + originalRequest?.url);
       console.error('   Vérifie que:');
-      console.error('   1. Le backend est lancé (npm run dev dans backend)');
-      console.error(`   2. L'IP est correcte (actuelle: ${YOUR_PC_IP})`);
+      console.error('   1. Le backend est lancé');
+      console.error(`   2. L'IP est correcte (dev: ${DEV_SERVER_IP}, prod: ${PROD_SERVER_IP})`);
       console.error('   3. Le pare-feu ne bloque pas le port 5000');
-      console.error('   4. Le téléphone est sur le même réseau WiFi');
+      console.error('   4. Le téléphone est sur le même réseau WiFi (en dev)');
     }
     
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -104,7 +111,10 @@ api.interceptors.response.use(
 
 export async function checkApiHealth(): Promise<boolean> {
   try {
-    const serverUrl = `http://${YOUR_PC_IP}:5000`;
+    const serverUrl = __DEV__ 
+      ? `http://${DEV_SERVER_IP}:${SERVER_PORT}`
+      : `http://${PROD_SERVER_IP}:${SERVER_PORT}`;
+      
     console.log(`🔍 Checking API health at ${serverUrl}/health...`);
     
     const response = await axios.get(`${serverUrl}/health`, { timeout: 5000 });
@@ -112,7 +122,10 @@ export async function checkApiHealth(): Promise<boolean> {
     return response.data.status === 'OK';
   } catch (error: any) {
     try {
-      const serverUrl = `http://${YOUR_PC_IP}:5000`;
+      const serverUrl = __DEV__ 
+        ? `http://${DEV_SERVER_IP}:${SERVER_PORT}`
+        : `http://${PROD_SERVER_IP}:${SERVER_PORT}`;
+        
       const response = await axios.get(serverUrl, { timeout: 5000 });
       console.log('✅ API health check passed (root endpoint)');
       return true;

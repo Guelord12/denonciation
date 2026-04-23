@@ -1,11 +1,18 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
+// ✅ CORRECTION : URL absolue pour la production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? 'http://16.171.39.76:5000/api' : '/api');
+
+console.log('🔧 API Base URL:', API_BASE_URL);
+
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
@@ -24,10 +31,19 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
-      const newToken = await useAuthStore.getState().refreshAccessToken();
-      if (newToken) {
-        originalRequest.headers.Authorization = `Bearer ${newToken}`;
-        return api(originalRequest);
+      try {
+        const newToken = await useAuthStore.getState().refreshAccessToken();
+        if (newToken) {
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        console.error('❌ Token refresh failed:', refreshError);
+        useAuthStore.getState().clearAuth();
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
       }
     }
     
@@ -94,6 +110,8 @@ export const reportAPI = {
     api.post(`/reports/${id}/witness`, { testimony }),
   shareReport: (id: number, platform: string) =>
     api.post(`/reports/${id}/share`, { platform }),
+  reportContent: (id: number, type: string, reason: string) =>
+    api.post(`/reports/${id}/report`, { type, reason }),
 };
 
 // Comment API
@@ -124,6 +142,8 @@ export const liveAPI = {
     api.post(`/live/${id}/like`),
   getMessages: (id: number, limit = 100, before?: string) =>
     api.get(`/live/${id}/messages`, { params: { limit, before } }),
+  sendSuperChat: (id: number, amount: number, message: string, color?: string) =>
+    api.post(`/live/${id}/super-chat`, { amount, message, color }),
 };
 
 // Notification API

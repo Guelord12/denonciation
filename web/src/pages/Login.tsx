@@ -21,11 +21,16 @@ export default function Login() {
   const onSubmit = async (data: LoginForm) => {
     setIsLoading(true);
     try {
-      const response = await login(data.username, data.password);
+      // ✅ login() ne retourne pas l'utilisateur, on l'appelle simplement
+      await login(data.username, data.password);
+      
+      // ✅ Récupérer l'utilisateur depuis le store APRÈS la connexion
+      const user = useAuthStore.getState().user;
+      
       toast.success('Connexion réussie !');
       
       // ✅ Rediriger l'admin vers /admin, les autres vers /dashboard
-      if (response.user?.is_admin) {
+      if (user?.is_admin) {
         navigate('/admin');
       } else {
         navigate('/dashboard');

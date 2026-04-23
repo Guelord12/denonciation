@@ -177,6 +177,9 @@ dependencies {
         }
     }
 
+    // ✅ CORRECTION : utiliser findProperty pour récupérer hermesEnabled
+    def hermesEnabled = findProperty('hermesEnabled') ?: 'true'
+    
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {

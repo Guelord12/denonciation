@@ -1,7 +1,11 @@
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/authStore';
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// ✅ CORRECTION : URL absolue pour la production
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 
+  (import.meta.env.PROD ? 'http://16.171.39.76:5000' : 'http://localhost:5000');
+
+console.log('🔧 Socket URL:', SOCKET_URL);
 
 class SocketService {
   private socket: Socket | null = null;
@@ -22,6 +26,8 @@ class SocketService {
     const user = useAuthStore.getState().user;
 
     console.log('🔌 Connecting to socket server:', SOCKET_URL);
+    console.log('   Auth token:', token ? `${token.substring(0, 20)}...` : 'none');
+    console.log('   User:', user?.username || 'anonymous');
 
     this.socket = io(SOCKET_URL, {
       auth: {
@@ -52,6 +58,7 @@ class SocketService {
 
     this.socket.on('connect', () => {
       console.log('✅ Socket connected with ID:', this.socket?.id);
+      console.log('   Transport:', this.socket?.io.engine.transport.name);
       this.reconnectAttempts = 0;
     });
 
@@ -61,6 +68,7 @@ class SocketService {
       if (reason === 'io server disconnect') {
         // Reconnexion manuelle si déconnecté par le serveur
         setTimeout(() => {
+          console.log('🔄 Attempting manual reconnect...');
           this.socket?.connect();
         }, 1000);
       }
@@ -76,7 +84,7 @@ class SocketService {
     });
 
     this.socket.on('reconnect_attempt', (attemptNumber: number) => {
-      console.log('🔄 Reconnect attempt:', attemptNumber);
+      console.log('🔄 Reconnect attempt:', attemptNumber, '/', this.maxReconnectAttempts);
     });
 
     this.socket.on('reconnect_error', (error: Error) => {
@@ -85,6 +93,23 @@ class SocketService {
 
     this.socket.on('reconnect_failed', () => {
       console.error('❌ Reconnect failed after max attempts');
+    });
+
+    // Événements métier
+    this.socket.on('new_stream', (data) => {
+      console.log('📡 New stream event:', data);
+    });
+
+    this.socket.on('stream_ended_global', (data) => {
+      console.log('📡 Stream ended:', data);
+    });
+
+    this.socket.on('admin_notification', (data) => {
+      console.log('📡 Admin notification:', data);
+    });
+
+    this.socket.on('stats_update', (data) => {
+      console.log('📡 Stats update:', data?.type || 'unknown');
     });
   }
 
@@ -168,6 +193,7 @@ class SocketService {
       this.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
+      console.log('🔌 Socket disconnected manually');
     }
   }
 
@@ -176,6 +202,7 @@ class SocketService {
    */
   reconnectWithNewToken(token: string): void {
     if (this.socket) {
+      console.log('🔄 Reconnecting with new token...');
       this.socket.auth = { token };
       this.socket.disconnect().connect();
     }
@@ -189,6 +216,7 @@ class SocketService {
    * Rejoindre un stream
    */
   joinStream(streamId: string): void {
+    console.log('📺 Joining stream:', streamId);
     this.emit('join_stream', streamId);
   }
 
@@ -196,6 +224,7 @@ class SocketService {
    * Quitter un stream
    */
   leaveStream(streamId: string): void {
+    console.log('📺 Leaving stream:', streamId);
     this.emit('leave_stream', streamId);
   }
 
@@ -217,6 +246,7 @@ class SocketService {
    * Démarrer une diffusion
    */
   startBroadcast(streamId: string): void {
+    console.log('🎥 Starting broadcast:', streamId);
     this.emit('start_broadcast', { streamId });
   }
 
@@ -224,6 +254,7 @@ class SocketService {
    * Arrêter une diffusion
    */
   endBroadcast(streamId: string): void {
+    console.log('🛑 Ending broadcast:', streamId);
     this.emit('end_broadcast', { streamId });
   }
 

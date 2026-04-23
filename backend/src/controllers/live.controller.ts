@@ -48,9 +48,9 @@ function getParamId(params: any): string {
 async function logActivity(userId: number, action: string, entityType: string, entityId: number, req: Request, metadata?: any): Promise<void> {
   try {
     await query(
-      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent) 
-       VALUES ($1, $2, $3, $4, $5, $6)`,
-      [userId, action, entityType, entityId, req.ip || req.socket.remoteAddress || 'unknown', req.headers['user-agent'] || 'unknown']
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent, metadata) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [userId, action, entityType, entityId, req.ip || req.socket.remoteAddress || 'unknown', req.headers['user-agent'] || 'unknown', metadata ? JSON.stringify(metadata) : null]
     );
   } catch (error) {
     logger.error('❌ Log activity error:', error);
@@ -59,7 +59,7 @@ async function logActivity(userId: number, action: string, entityType: string, e
 
 async function filterBadWords(message: string): Promise<{ clean: boolean; filtered: string }> {
   try {
-    const bannedWords = await query('SELECT word, replacement FROM banned_words');
+    const bannedWords = await query('SELECT word, replacement FROM banned_words WHERE is_active = true');
     let filtered = message;
     for (const row of bannedWords.rows) {
       const regex = new RegExp(`\\b${row.word}\\b`, 'gi');
@@ -82,17 +82,29 @@ export async function createLiveStream(req: AuthRequest, res: Response): Promise
 
     logger.info(`📝 Creating stream for user ${userId}: ${title}`);
 
+    // ✅ AMÉLIORATION : Validation renforcée
     if (!title || title.trim().length < 3) { 
       res.status(400).json({ error: 'Le titre doit contenir au moins 3 caractères' }); 
       return; 
     }
-    if (title.trim().length > 255) { 
-      res.status(400).json({ error: 'Le titre ne peut pas dépasser 255 caractères' }); 
+    if (title.trim().length > 100) { 
+      res.status(400).json({ error: 'Le titre ne peut pas dépasser 100 caractères' }); 
       return; 
     }
     if (is_premium && (!price || price <= 0)) { 
       res.status(400).json({ error: 'Un prix valide est requis pour un stream premium' }); 
       return; 
+    }
+
+    // ✅ AMÉLIORATION : Vérifier si l'utilisateur n'a pas déjà un stream actif
+    const existingStream = await query(
+      `SELECT id FROM live_streams WHERE user_id = $1 AND status IN ('active', 'paused')`,
+      [userId]
+    );
+    
+    if (existingStream.rows.length > 0) {
+      res.status(400).json({ error: 'Vous avez déjà un stream actif. Terminez-le avant d\'en créer un nouveau.' });
+      return;
     }
 
     const streamKey = `live_${userId}_${crypto.randomBytes(16).toString('hex')}`;
@@ -110,22 +122,24 @@ export async function createLiveStream(req: AuthRequest, res: Response): Promise
 
     logger.info(`🔑 Stream key generated: ${streamKey.substring(0, 10)}...`);
 
-    // ✅ CORRECTION : Utiliser uniquement les colonnes qui existent réellement
     const result = await query(
       `INSERT INTO live_streams 
-       (user_id, title, description, is_premium, price, stream_key, stream_url, status, start_time, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+       (user_id, title, description, is_premium, price, stream_key, stream_url, hls_url, status, start_time, category, tags, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW(), NOW())
        RETURNING *`,
       [
-        userId,                                                    // $1
-        title.trim(),                                              // $2
-        description?.trim() || null,                               // $3
-        is_premium || false,                                       // $4
-        price || 0,                                                // $5
-        streamKey,                                                 // $6
-        streamUrl,                                                 // $7
-        initialStatus,                                             // $8
-        startTimeValue                                             // $9
+        userId,
+        title.trim(),
+        description?.trim() || null,
+        is_premium || false,
+        price || 0,
+        streamKey,
+        streamUrl,
+        hlsUrl,
+        initialStatus,
+        startTimeValue,
+        category || null,
+        tags ? JSON.stringify(tags) : null
       ]
     );
 
@@ -163,7 +177,7 @@ export async function createLiveStream(req: AuthRequest, res: Response): Promise
 
 export async function getLiveStreams(req: Request, res: Response): Promise<void> {
   try {
-    const { page = '1', limit = '20', premium, category, channel_id, status = 'active', search } = req.query;
+    const { page = '1', limit = '20', premium, category, channel_id, status = 'active', search, sort = 'viewers' } = req.query;
     const pageNum = Math.max(1, Number(page));
     const limitNum = Math.min(100, Math.max(1, Number(limit)));
     const offset = (pageNum - 1) * limitNum;
@@ -179,15 +193,25 @@ export async function getLiveStreams(req: Request, res: Response): Promise<void>
     if (search) { whereConditions.push(`(ls.title ILIKE $${paramCounter} OR ls.description ILIKE $${paramCounter})`); params.push(`%${search}%`); paramCounter++; }
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
+    
+    // ✅ AMÉLIORATION : Tri configurable
+    let orderByClause = '';
+    if (sort === 'recent') {
+      orderByClause = 'ls.start_time DESC';
+    } else if (sort === 'likes') {
+      orderByClause = 'ls.like_count DESC';
+    } else {
+      orderByClause = 'CASE WHEN ls.status = \'active\' THEN 0 ELSE 1 END, ls.viewer_count DESC, ls.start_time DESC';
+    }
 
     const streams = await query(
-      `SELECT ls.*, u.username, u.avatar, 
-        (SELECT COUNT(*) FROM live_viewers WHERE stream_id = ls.id) as current_viewers,
+      `SELECT ls.*, u.username, u.avatar, u.first_name, u.last_name,
+        (SELECT COUNT(*) FROM live_viewers WHERE stream_id = ls.id AND last_seen_at > NOW() - INTERVAL '1 minute') as current_viewers,
         (SELECT COUNT(*) FROM stream_likes WHERE stream_id = ls.id) as current_likes
        FROM live_streams ls 
        LEFT JOIN users u ON ls.user_id = u.id 
        ${whereClause} 
-       ORDER BY CASE WHEN ls.status = 'active' THEN 0 ELSE 1 END, ls.viewer_count DESC, ls.start_time DESC 
+       ORDER BY ${orderByClause}
        LIMIT $${paramCounter++} OFFSET $${paramCounter++}`,
       [...params, limitNum, offset]
     );
@@ -213,7 +237,7 @@ export async function getLiveStreamById(req: Request, res: Response): Promise<vo
 
     const result = await query(
       `SELECT ls.*, u.username, u.avatar, u.first_name, u.last_name,
-        (SELECT COUNT(*) FROM live_viewers WHERE stream_id = ls.id) as current_viewers,
+        (SELECT COUNT(*) FROM live_viewers WHERE stream_id = ls.id AND last_seen_at > NOW() - INTERVAL '1 minute') as current_viewers,
         (SELECT COUNT(*) FROM stream_likes WHERE stream_id = ls.id) as current_likes
        FROM live_streams ls 
        LEFT JOIN users u ON ls.user_id = u.id 
@@ -243,7 +267,8 @@ export async function getLiveStreamById(req: Request, res: Response): Promise<vo
     const messages = await query(
       `SELECT cm.id, cm.message, cm.created_at, u.id as user_id, u.username, u.avatar 
        FROM live_chat_messages cm LEFT JOIN users u ON cm.user_id = u.id 
-       WHERE cm.live_stream_id = $1 ORDER BY cm.created_at DESC LIMIT 100`, [id]
+       WHERE cm.live_stream_id = $1 AND cm.created_at > NOW() - INTERVAL '2 hours'
+       ORDER BY cm.created_at DESC LIMIT 100`, [id]
     );
 
     const superChats = await query(
@@ -410,7 +435,7 @@ export async function likeStream(req: AuthRequest, res: Response): Promise<void>
 
     if (existingLike.rows.length > 0) {
       await query('DELETE FROM stream_likes WHERE stream_id = $1 AND user_id = $2', [id, userId]);
-      await query('UPDATE live_streams SET like_count = COALESCE(like_count, 0) - 1 WHERE id = $1', [id]);
+      await query('UPDATE live_streams SET like_count = GREATEST(COALESCE(like_count, 0) - 1, 0) WHERE id = $1', [id]);
     } else {
       await query('INSERT INTO stream_likes (stream_id, user_id) VALUES ($1, $2)', [id, userId]);
       await query('UPDATE live_streams SET like_count = COALESCE(like_count, 0) + 1 WHERE id = $1', [id]);
@@ -485,13 +510,26 @@ export async function reportStream(req: AuthRequest, res: Response): Promise<voi
 export async function getStreamMessages(req: Request, res: Response): Promise<void> {
   try {
     const id = getParamId(req.params);
-    const { limit = '100' } = req.query;
+    const { limit = '100', before } = req.query;
 
-    const messages = await query(
-      `SELECT cm.id, cm.message, cm.created_at, u.id as user_id, u.username, u.avatar 
-       FROM live_chat_messages cm LEFT JOIN users u ON cm.user_id = u.id 
-       WHERE cm.live_stream_id = $1 ORDER BY cm.created_at DESC LIMIT $2`, [id, Number(limit)]
-    );
+    let queryText = `
+      SELECT cm.id, cm.message, cm.created_at, u.id as user_id, u.username, u.avatar 
+      FROM live_chat_messages cm LEFT JOIN users u ON cm.user_id = u.id 
+      WHERE cm.live_stream_id = $1
+    `;
+    const params: any[] = [id];
+    
+    if (before) {
+      queryText += ` AND cm.created_at < $2`;
+      params.push(before);
+      queryText += ` ORDER BY cm.created_at DESC LIMIT $3`;
+      params.push(Number(limit));
+    } else {
+      queryText += ` ORDER BY cm.created_at DESC LIMIT $2`;
+      params.push(Number(limit));
+    }
+
+    const messages = await query(queryText, params);
 
     res.json({ messages: messages.rows.reverse(), has_more: messages.rows.length === Number(limit) });
   } catch (error) {
@@ -509,7 +547,13 @@ export async function getStreamStats(req: Request, res: Response): Promise<void>
     const id = getParamId(req.params);
 
     const stats = await query(
-      `SELECT COUNT(DISTINCT lv.user_id) as unique_viewers, COUNT(DISTINCT cm.user_id) as unique_chatters, COUNT(cm.id) as total_messages, COUNT(sl.user_id) as total_likes, COALESCE(SUM(sc.amount), 0) as total_super_chats 
+      `SELECT 
+        COUNT(DISTINCT lv.user_id) as unique_viewers, 
+        COUNT(DISTINCT cm.user_id) as unique_chatters, 
+        COUNT(cm.id) as total_messages, 
+        COUNT(sl.user_id) as total_likes, 
+        COALESCE(SUM(sc.amount), 0) as total_super_chats,
+        (SELECT COUNT(*) FROM live_viewers WHERE stream_id = $1 AND last_seen_at > NOW() - INTERVAL '1 minute') as current_viewers
        FROM live_streams ls 
        LEFT JOIN live_viewers lv ON ls.id = lv.stream_id 
        LEFT JOIN live_chat_messages cm ON ls.id = cm.live_stream_id 
@@ -518,7 +562,7 @@ export async function getStreamStats(req: Request, res: Response): Promise<void>
        WHERE ls.id = $1 GROUP BY ls.id`, [id]
     );
 
-    res.json(stats.rows[0] || {});
+    res.json(stats.rows[0] || { unique_viewers: 0, unique_chatters: 0, total_messages: 0, total_likes: 0, total_super_chats: 0, current_viewers: 0 });
   } catch (error) {
     logger.error('❌ Get stream stats error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -539,7 +583,7 @@ export async function createClip(req: AuthRequest, res: Response): Promise<void>
     const duration = end_time - start_time;
     if (duration > 60) { res.status(400).json({ error: 'Le clip ne peut pas dépasser 60 secondes' }); return; }
 
-    const result = await query(`INSERT INTO clips (stream_id, user_id, title, start_time, end_time, duration) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`, [id, userId, title || 'Mon clip', start_time, end_time, duration]);
+    const result = await query(`INSERT INTO clips (stream_id, user_id, title, start_time, end_time, duration, created_at) VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`, [id, userId, title || 'Mon clip', start_time, end_time, duration]);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     logger.error('❌ Create clip error:', error);
@@ -554,7 +598,7 @@ export async function createClip(req: AuthRequest, res: Response): Promise<void>
 export async function getStreamViewers(req: Request, res: Response): Promise<void> {
   try {
     const id = getParamId(req.params);
-    const viewers = await query(`SELECT lv.user_id, u.username, u.avatar FROM live_viewers lv LEFT JOIN users u ON lv.user_id = u.id WHERE lv.stream_id = $1`, [id]);
+    const viewers = await query(`SELECT DISTINCT lv.user_id, u.username, u.avatar FROM live_viewers lv LEFT JOIN users u ON lv.user_id = u.id WHERE lv.stream_id = $1 AND lv.last_seen_at > NOW() - INTERVAL '1 minute'`, [id]);
     res.json({ viewers: viewers.rows, count: viewers.rows.length });
   } catch (error) {
     logger.error('❌ Get stream viewers error:', error);

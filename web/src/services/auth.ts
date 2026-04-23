@@ -1,14 +1,19 @@
 import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+// ✅ CORRECTION : URL absolue pour la production
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? 'http://16.171.39.76:5000/api' : '/api');
+
+console.log('🔧 Auth API Base URL:', API_BASE_URL);
 
 // Instance Axios séparée pour l'authentification (sans intercepteur pour éviter les boucles)
 const authAxios = axios.create({
-  baseURL: API_URL,
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
 export interface LoginCredentials {
@@ -63,6 +68,7 @@ class AuthService {
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
+      console.log('🔐 Login attempt:', { username: credentials.username });
       const response = await authAxios.post<AuthResponse>('/auth/login', credentials);
       
       // Stocker les tokens dans le store
@@ -75,8 +81,10 @@ class AuthService {
       localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(user));
       
+      console.log('✅ Login successful:', user.username);
       return response.data;
     } catch (error: any) {
+      console.error('❌ Login error:', error.response?.data || error.message);
       throw new Error(error.response?.data?.error || 'Erreur de connexion');
     }
   }
@@ -86,6 +94,7 @@ class AuthService {
    */
   async register(data: RegisterData): Promise<AuthResponse> {
     try {
+      console.log('📝 Register attempt:', { username: data.username, email: data.email });
       const response = await authAxios.post<AuthResponse>('/auth/register', data);
       
       const { accessToken, refreshToken, user } = response.data;
@@ -96,8 +105,10 @@ class AuthService {
       localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(user));
       
+      console.log('✅ Register successful:', user.username);
       return response.data;
     } catch (error: any) {
+      console.error('❌ Register error:', error.response?.data || error.message);
       throw new Error(error.response?.data?.error || 'Erreur d\'inscription');
     }
   }
@@ -220,6 +231,7 @@ class AuthService {
         const user = JSON.parse(userStr);
         useAuthStore.getState().setTokens(accessToken, refreshToken);
         useAuthStore.getState().setUser(user);
+        console.log('✅ Auth initialized from storage:', user.username);
       } catch (error) {
         console.error('Failed to parse stored user:', error);
         this.clearStorage();

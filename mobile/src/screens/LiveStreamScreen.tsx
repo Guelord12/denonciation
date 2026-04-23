@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -24,15 +24,37 @@ import useSocket from '../hooks/useSocket';
 import { 
   Heart, Share2, Flag, Send, Users, X, Lock, MessageCircle,
   Camera as CameraIcon, RotateCcw, Mic, MicOff, Video as VideoIcon,
-  VideoOff, MoreVertical, Ban,
+  VideoOff, MoreVertical, Wifi, WifiOff, RefreshCw, AlertTriangle,
 } from 'lucide-react-native';
 import { formatDistance } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Toast from 'react-native-toast-message';
 import * as Sharing from 'expo-sharing';
+// ✅ IMPORT POUR WEBRTC
+import { RTCPeerConnection, RTCSessionDescription, RTCIceCandidate, RTCView, MediaStream } from 'react-native-webrtc';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
+// =====================================================
+// CONSTANTES
+// =====================================================
+const CONFIG = {
+  WEBRTC_CONNECTION_TIMEOUT: 30000, // 30 secondes
+  HEARTBEAT_INTERVAL: 10000, // 10 secondes
+  MAX_RECONNECT_ATTEMPTS: 3,
+};
+
+const ICE_SERVERS = [
+  { urls: 'stun:stun.l.google.com:19302' },
+  { urls: 'stun:stun1.l.google.com:19302' },
+];
+
+// URL du serveur HLS (fallback)
+const HLS_SERVER_URL = 'http://192.168.176.90:8000/live';
+
+// =====================================================
+// TYPES
+// =====================================================
 interface ChatMessage {
   id: number;
   userId: number;
@@ -48,21 +70,46 @@ interface Viewer {
   avatar: string | null;
 }
 
-// ✅ URL du serveur HLS
-const HLS_SERVER_URL = 'http://192.168.176.90:8000/live';
+interface StreamData {
+  id: number;
+  title: string;
+  description?: string;
+  user_id: number;
+  username: string;
+  avatar?: string;
+  stream_key?: string;
+  hls_url?: string;
+  is_premium?: boolean;
+  price?: number;
+  current_viewers?: number;
+  like_count?: number;
+  hasAccess?: boolean;
+  messages?: ChatMessage[];
+  status?: string;
+}
 
+// =====================================================
+// COMPOSANT PRINCIPAL
+// =====================================================
 export default function LiveStreamScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { streamId } = route.params as { streamId: string };
   const { user, isAuthenticated } = useAuthStore();
-  const socket = useSocket();
+  const { socket, isConnected: socketConnected } = useSocket();
   const queryClient = useQueryClient();
+  
+  // Refs
   const videoRef = useRef<Video>(null);
   const cameraRef = useRef<CameraView>(null);
   const chatListRef = useRef<FlatList>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  const [stream, setStream] = useState<any>(null);
+  // États du stream
+  const [stream, setStream] = useState<StreamData | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [viewerCount, setViewerCount] = useState(0);
@@ -80,6 +127,15 @@ export default function LiveStreamScreen() {
     error: null,
   });
   
+  // ✅ NOUVEAUX ÉTATS POUR WEBRTC
+  const [streamType, setStreamType] = useState<'hls' | 'webrtc' | 'unknown'>('unknown');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected' | 'reconnecting'>('connecting');
+  const [broadcasterReady, setBroadcasterReady] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const reconnectAttemptsRef = useRef(0);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  
+  // États du streamer
   const [isStreamer, setIsStreamer] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isBroadcasting, setIsBroadcasting] = useState(false);
@@ -88,10 +144,13 @@ export default function LiveStreamScreen() {
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [flashMode, setFlashMode] = useState<'off' | 'on' | 'auto'>('off');
 
+  // =====================================================
+  // REQUÊTE PRINCIPALE
+  // =====================================================
   const { data: streamData, refetch } = useQuery({
     queryKey: ['stream', streamId],
     queryFn: () => api.get(`/live/${streamId}`).then(res => res.data),
-    onSuccess: (data) => {
+    onSuccess: (data: StreamData) => {
       setStream(data);
       setViewerCount(data.current_viewers || 0);
       setLikeCount(data.like_count || 0);
@@ -99,14 +158,30 @@ export default function LiveStreamScreen() {
       setMessages(data.messages || []);
       setIsStreamer(data.user_id === user?.id);
       setIsLoading(false);
+      
+      // ✅ Détecter le type de flux
+      if (data.hls_url) {
+        setStreamType('hls');
+        console.log('📺 Stream type: HLS');
+      } else {
+        setStreamType('webrtc');
+        console.log('📡 Stream type: WebRTC');
+        // Initialiser WebRTC pour les spectateurs
+        if (!isStreamer) {
+          initializeWebRTC();
+        }
+      }
     },
     onError: () => {
       setIsLoading(false);
       Alert.alert('Erreur', 'Impossible de charger le stream');
       navigation.goBack();
-    }
+    },
   });
 
+  // =====================================================
+  // MUTATIONS
+  // =====================================================
   const likeMutation = useMutation({
     mutationFn: () => api.post(`/live/${streamId}/like`),
     onSuccess: (response) => setLikeCount(response.data.like_count),
@@ -129,21 +204,215 @@ export default function LiveStreamScreen() {
     },
   });
 
-  useEffect(() => {
-    if (isStreamer) {
-      (async () => {
-        const { status } = await Camera.requestCameraPermissionsAsync();
-        const { status: audioStatus } = await Camera.requestMicrophonePermissionsAsync();
-        setHasPermission(status === 'granted' && audioStatus === 'granted');
-      })();
-    }
-  }, [isStreamer]);
+  // =====================================================
+  // ✅ INITIALISATION WEBRTC (SPECTATEUR)
+  // =====================================================
+  const initializeWebRTC = useCallback(() => {
+    if (!socket || !streamId || isStreamer) return;
+    
+    console.log('📡 Initializing WebRTC for stream:', streamId);
+    setConnectionStatus('connecting');
+    setBroadcasterReady(false);
+    
+    // Rejoindre le stream
+    socket.emit('join_stream', streamId);
+    
+    // Timeout de connexion
+    connectionTimeoutRef.current = setTimeout(() => {
+      if (connectionStatus === 'connecting' && !broadcasterReady) {
+        console.warn('⏰ WebRTC connection timeout');
+        setConnectionStatus('disconnected');
+        setVideoStatus({ isLoaded: false, error: 'Délai de connexion dépassé' });
+      }
+    }, CONFIG.WEBRTC_CONNECTION_TIMEOUT);
+    
+    // Démarrer le heartbeat
+    startHeartbeat();
+    
+  }, [socket, streamId, isStreamer, connectionStatus, broadcasterReady]);
 
+  // ✅ Créer une connexion peer WebRTC
+  const createPeerConnection = useCallback(async (broadcasterId: string) => {
+    try {
+      console.log('🔗 Creating peer connection...');
+      
+      const pc = new RTCPeerConnection({
+        iceServers: ICE_SERVERS,
+      });
+      
+      // Gérer les tracks entrants
+      pc.ontrack = (event) => {
+        console.log('🎥 Received remote track');
+        if (event.streams && event.streams[0]) {
+          setRemoteStream(event.streams[0]);
+          setConnectionStatus('connected');
+          setVideoStatus({ isLoaded: true, error: null });
+        }
+      };
+      
+      // Gérer l'état de la connexion
+      pc.onconnectionstatechange = () => {
+        console.log('📊 WebRTC connection state:', pc.connectionState);
+        
+        switch (pc.connectionState) {
+          case 'connected':
+            setConnectionStatus('connected');
+            break;
+          case 'disconnected':
+          case 'failed':
+            setConnectionStatus('disconnected');
+            attemptReconnect();
+            break;
+          case 'connecting':
+            setConnectionStatus('connecting');
+            break;
+        }
+      };
+      
+      // Gérer les candidats ICE
+      pc.onicecandidate = (event) => {
+        if (event.candidate && socket) {
+          socket.emit('webrtc_ice_candidate', {
+            targetId: broadcasterId,
+            candidate: event.candidate,
+          });
+        }
+      };
+      
+      peerConnectionRef.current = pc;
+      
+      // Envoyer le statut
+      socket?.emit('webrtc_connection_status', {
+        streamId,
+        status: 'connecting',
+      });
+      
+      return pc;
+    } catch (error) {
+      console.error('❌ Failed to create peer connection:', error);
+      return null;
+    }
+  }, [socket, streamId]);
+
+  // ✅ Heartbeat
+  const startHeartbeat = useCallback(() => {
+    if (heartbeatIntervalRef.current) {
+      clearInterval(heartbeatIntervalRef.current);
+    }
+    
+    heartbeatIntervalRef.current = setInterval(() => {
+      if (socket && socket.connected) {
+        socket.emit('heartbeat');
+      } else {
+        setConnectionStatus('disconnected');
+      }
+    }, CONFIG.HEARTBEAT_INTERVAL);
+  }, [socket]);
+
+  // ✅ Tentative de reconnexion
+  const attemptReconnect = useCallback(() => {
+    if (reconnectAttemptsRef.current >= CONFIG.MAX_RECONNECT_ATTEMPTS) {
+      console.error('❌ Max reconnect attempts reached');
+      setVideoStatus({ isLoaded: false, error: 'Impossible de se reconnecter' });
+      return;
+    }
+    
+    reconnectAttemptsRef.current++;
+    setReconnectAttempts(reconnectAttemptsRef.current);
+    setConnectionStatus('reconnecting');
+    
+    console.log(`🔄 Reconnect attempt ${reconnectAttemptsRef.current}/${CONFIG.MAX_RECONNECT_ATTEMPTS}`);
+    
+    // Nettoyer l'ancienne connexion
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+    
+    setRemoteStream(null);
+    
+    setTimeout(() => {
+      initializeWebRTC();
+    }, 2000);
+  }, [initializeWebRTC]);
+
+  // ✅ Reconnexion manuelle
+  const handleManualReconnect = useCallback(() => {
+    reconnectAttemptsRef.current = 0;
+    setReconnectAttempts(0);
+    setVideoStatus({ isLoaded: false, error: null });
+    setRemoteStream(null);
+    initializeWebRTC();
+  }, [initializeWebRTC]);
+
+  // =====================================================
+  // WEBSOCKET (Chat et événements)
+  // =====================================================
   useEffect(() => {
     if (!socket || !streamId) return;
 
+    console.log('📡 Setting up socket listeners for stream:', streamId);
+    
     socket.emit('join_stream', streamId);
 
+    // ✅ Événements WebRTC
+    socket.on('broadcaster_ready', (data: { streamId: string; broadcasterId: string }) => {
+      if (data.streamId === streamId) {
+        console.log('🎬 Broadcaster ready:', data.broadcasterId);
+        setBroadcasterReady(true);
+        setConnectionStatus('connected');
+      }
+    });
+
+    socket.on('stream_status', (data: { streamId: string; status: string; broadcasterReady: boolean }) => {
+      if (data.streamId === streamId) {
+        setBroadcasterReady(data.broadcasterReady);
+      }
+    });
+
+    socket.on('broadcaster_issue', (data: { message: string }) => {
+      Toast.show({ type: 'error', text1: data.message });
+    });
+
+    socket.on('webrtc_offer', async (data: { socketId: string; offer: RTCSessionDescription }) => {
+      console.log('📡 Received WebRTC offer from:', data.socketId);
+      
+      try {
+        if (connectionTimeoutRef.current) {
+          clearTimeout(connectionTimeoutRef.current);
+        }
+        
+        const pc = await createPeerConnection(data.socketId);
+        if (!pc) return;
+        
+        await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
+        
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        
+        socket.emit('webrtc_answer', {
+          targetId: data.socketId,
+          answer: answer,
+        });
+        
+        console.log('✅ WebRTC answer sent');
+      } catch (error) {
+        console.error('❌ WebRTC error:', error);
+        setConnectionStatus('disconnected');
+      }
+    });
+
+    socket.on('webrtc_ice_candidate', async (data: { socketId: string; candidate: RTCIceCandidate }) => {
+      try {
+        if (peerConnectionRef.current && data.candidate) {
+          await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
+        }
+      } catch (error) {
+        console.warn('ICE candidate error:', error);
+      }
+    });
+
+    // Événements standards
     socket.on('viewer_count_update', (data: { streamId: string; count: number }) => {
       if (data.streamId === streamId) setViewerCount(data.count);
     });
@@ -163,15 +432,53 @@ export default function LiveStreamScreen() {
     socket.on('viewers_list', (data: { viewers: Viewer[] }) => setViewers(data.viewers));
 
     return () => {
+      console.log('🧹 Cleaning up socket listeners');
       socket.emit('leave_stream', streamId);
+      socket.off('broadcaster_ready');
+      socket.off('stream_status');
+      socket.off('broadcaster_issue');
+      socket.off('webrtc_offer');
+      socket.off('webrtc_ice_candidate');
       socket.off('viewer_count_update');
       socket.off('new_chat_message');
       socket.off('like_update');
       socket.off('stream_ended');
       socket.off('viewers_list');
+      
+      // Nettoyer WebRTC
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+      
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
+        heartbeatIntervalRef.current = null;
+      }
+      
+      if (connectionTimeoutRef.current) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
+      }
     };
-  }, [socket, streamId]);
+  }, [socket, streamId, createPeerConnection, navigation]);
 
+  // =====================================================
+  // PERMISSIONS CAMÉRA (STREAMER)
+  // =====================================================
+  useEffect(() => {
+    if (isStreamer) {
+      (async () => {
+        const { status } = await Camera.requestCameraPermissionsAsync();
+        const { status: audioStatus } = await Camera.requestMicrophonePermissionsAsync();
+        setHasPermission(status === 'granted' && audioStatus === 'granted');
+      })();
+    }
+  }, [isStreamer]);
+
+  // =====================================================
+  // FONCTIONS STREAMER
+  // =====================================================
   const startBroadcasting = () => {
     setIsBroadcasting(true);
     socket?.emit('start_broadcast', { streamId });
@@ -235,7 +542,38 @@ export default function LiveStreamScreen() {
     setShowViewersModal(true);
   };
 
-  // ✅ URL HLS complète
+  // =====================================================
+  // RENDU
+  // =====================================================
+  
+  // ✅ Composant indicateur de connexion
+  const renderConnectionIndicator = () => {
+    if (isStreamer || streamType === 'hls') return null;
+    
+    const statusConfig = {
+      connecting: { icon: Wifi, color: '#FBBF24', text: 'Connexion...' },
+      connected: { icon: Wifi, color: '#10B981', text: 'Connecté' },
+      reconnecting: { icon: RefreshCw, color: '#FBBF24', text: `Reconnexion ${reconnectAttempts}/${CONFIG.MAX_RECONNECT_ATTEMPTS}` },
+      disconnected: { icon: WifiOff, color: '#EF4444', text: 'Déconnecté' },
+    };
+    
+    const config = statusConfig[connectionStatus];
+    const Icon = config.icon;
+    
+    return (
+      <View style={[styles.connectionIndicator, { borderColor: config.color }]}>
+        <Icon size={14} color={config.color} />
+        <Text style={[styles.connectionText, { color: config.color }]}>{config.text}</Text>
+        {connectionStatus === 'disconnected' && (
+          <TouchableOpacity onPress={handleManualReconnect} style={styles.reconnectButton}>
+            <RefreshCw size={12} color="#FFF" />
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  // URL HLS (fallback)
   const hlsUrl = stream?.stream_key ? `${HLS_SERVER_URL}/${stream.stream_key}/index.m3u8` : null;
 
   if (isLoading) {
@@ -280,6 +618,7 @@ export default function LiveStreamScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.videoContainer}>
+        {/* ✅ CAS 1 : Streamer avec caméra */}
         {isStreamer && hasPermission ? (
           <CameraView
             ref={cameraRef}
@@ -296,7 +635,20 @@ export default function LiveStreamScreen() {
               </View>
             )}
           </CameraView>
-        ) : hlsUrl ? (
+        ) : null}
+
+        {/* ✅ CAS 2 : WebRTC (stream distant) */}
+        {!isStreamer && streamType === 'webrtc' && remoteStream ? (
+          <RTCView
+            streamURL={remoteStream.toURL()}
+            style={styles.video}
+            objectFit="contain"
+            mirror={false}
+          />
+        ) : null}
+
+        {/* ✅ CAS 3 : HLS (fallback) */}
+        {!isStreamer && streamType === 'hls' && hlsUrl ? (
           <>
             {!videoStatus.isLoaded && !videoStatus.error && (
               <View style={styles.videoLoading}>
@@ -315,20 +667,46 @@ export default function LiveStreamScreen() {
               onLoad={() => {
                 console.log('✅ Video loaded');
                 setVideoStatus({ isLoaded: true, error: null });
+                setConnectionStatus('connected');
               }}
               onError={(error) => {
                 console.error('❌ Video error:', error);
                 setVideoStatus({ isLoaded: false, error: 'Erreur de lecture' });
+                setConnectionStatus('disconnected');
               }}
             />
           </>
-        ) : (
+        ) : null}
+
+        {/* ✅ CAS 4 : En attente de connexion WebRTC */}
+        {!isStreamer && streamType === 'webrtc' && !remoteStream && (
           <View style={styles.waitingContainer}>
             <ActivityIndicator size="large" color="#EF4444" />
-            <Text style={styles.waitingText}>En attente du stream...</Text>
+            <Text style={styles.waitingText}>
+              {connectionStatus === 'connecting' ? 'Connexion au streamer...' : 'En attente du stream...'}
+            </Text>
+            {connectionStatus === 'disconnected' && (
+              <TouchableOpacity style={styles.retryButton} onPress={handleManualReconnect}>
+                <RefreshCw size={20} color="#FFF" />
+                <Text style={styles.retryButtonText}>Réessayer</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
+        {/* ✅ Message d'erreur vidéo */}
+        {videoStatus.error && (
+          <View style={styles.errorOverlay}>
+            <AlertTriangle size={32} color="#FBBF24" />
+            <Text style={styles.errorText}>{videoStatus.error}</Text>
+            <TouchableOpacity style={styles.retryButton} onPress={handleManualReconnect}>
+              <RefreshCw size={20} color="#FFF" />
+              <Text style={styles.retryButtonText}>Réessayer</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.headerButton} onPress={() => navigation.goBack()}>
             <X size={24} color="#FFF" />
@@ -336,6 +714,8 @@ export default function LiveStreamScreen() {
           <View style={styles.streamInfo}>
             <Text style={styles.streamTitle} numberOfLines={1}>{stream?.title}</Text>
             <Text style={styles.streamerName}>@{stream?.username}</Text>
+            {/* ✅ Indicateur de connexion */}
+            {renderConnectionIndicator()}
           </View>
           <View style={styles.headerActions}>
             <TouchableOpacity style={styles.headerButton} onPress={showViewers}>
@@ -350,11 +730,13 @@ export default function LiveStreamScreen() {
           </View>
         </View>
 
+        {/* Badge LIVE */}
         <View style={styles.liveBadge}>
           <View style={styles.liveDot} />
           <Text style={styles.liveText}>LIVE</Text>
         </View>
 
+        {/* Contrôles streamer */}
         {isStreamer && isBroadcasting && (
           <View style={styles.streamerControls}>
             <TouchableOpacity style={[styles.controlButton, !isVideoEnabled && styles.controlButtonActive]} onPress={() => setIsVideoEnabled(!isVideoEnabled)}>
@@ -372,6 +754,7 @@ export default function LiveStreamScreen() {
           </View>
         )}
 
+        {/* Bouton démarrer diffusion */}
         {isStreamer && !isBroadcasting && (
           <TouchableOpacity style={styles.startStreamButton} onPress={startBroadcasting}>
             <VideoIcon size={24} color="#FFF" />
@@ -379,11 +762,13 @@ export default function LiveStreamScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Toggle chat */}
         <TouchableOpacity style={styles.chatToggle} onPress={() => setShowChat(!showChat)}>
           {showChat ? <X size={24} color="#FFF" /> : <MessageCircle size={24} color="#FFF" />}
         </TouchableOpacity>
       </View>
 
+      {/* Chat */}
       {showChat && (
         <KeyboardAvoidingView style={styles.chatContainer} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <View style={styles.chatHeader}>
@@ -429,6 +814,7 @@ export default function LiveStreamScreen() {
         </KeyboardAvoidingView>
       )}
 
+      {/* Actions (Like, Share) */}
       <View style={styles.actions}>
         <TouchableOpacity style={styles.actionButton} onPress={handleLike}>
           <Heart size={32} color={isLiked ? '#EF4444' : '#FFF'} fill={isLiked ? '#EF4444' : 'none'} />
@@ -440,6 +826,7 @@ export default function LiveStreamScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Modal Spectateurs */}
       <Modal visible={showViewersModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -461,6 +848,7 @@ export default function LiveStreamScreen() {
         </View>
       </Modal>
 
+      {/* Modal Menu Streamer */}
       <Modal visible={showStreamerMenu} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
@@ -483,6 +871,9 @@ export default function LiveStreamScreen() {
   );
 }
 
+// =====================================================
+// STYLES
+// =====================================================
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
@@ -496,6 +887,10 @@ const styles = StyleSheet.create({
   videoDisabledText: { color: '#FFF', marginTop: 12, fontSize: 16 },
   waitingContainer: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: '#1F2937' },
   waitingText: { color: '#FFF', marginTop: 12, fontSize: 16 },
+  errorOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 10 },
+  errorText: { color: '#FFF', marginTop: 12, fontSize: 14, textAlign: 'center', paddingHorizontal: 20 },
+  retryButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#EF4444', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 25, marginTop: 20, gap: 8 },
+  retryButtonText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   header: { position: 'absolute', top: Platform.OS === 'ios' ? 50 : 30, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, zIndex: 10 },
   headerButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   streamInfo: { flex: 1, marginHorizontal: 12 },
@@ -503,6 +898,9 @@ const styles = StyleSheet.create({
   streamerName: { color: '#CCC', fontSize: 14 },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   viewerCountText: { color: '#FFF', marginLeft: 4, fontSize: 12 },
+  connectionIndicator: { flexDirection: 'row', alignItems: 'center', marginTop: 4, gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12, borderWidth: 1, alignSelf: 'flex-start' },
+  connectionText: { fontSize: 10 },
+  reconnectButton: { marginLeft: 4, padding: 2, backgroundColor: '#EF4444', borderRadius: 10 },
   liveBadge: { position: 'absolute', top: Platform.OS === 'ios' ? 100 : 80, left: 16, flexDirection: 'row', alignItems: 'center', backgroundColor: '#EF4444', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 4, zIndex: 10 },
   liveDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFF', marginRight: 6 },
   liveText: { color: '#FFF', fontSize: 12, fontWeight: 'bold' },

@@ -11,31 +11,30 @@ export function useSocket() {
       return;
     }
 
-    const newSocket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000', {
+    // ✅ CORRECTION : Utiliser l'URL absolue de production
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || 
+      (import.meta.env.PROD ? 'http://16.171.39.76:5000' : 'http://localhost:5000');
+
+    console.log('🔌 Connecting to socket:', socketUrl);
+
+    const newSocket = io(socketUrl, {
       auth: { token: accessToken },
-      transports: ['websocket'],
+      transports: ['polling', 'websocket'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
     });
 
     newSocket.on('connect', () => {
-      // ✅ Log uniquement en développement
-      if (import.meta.env.DEV) {
-        console.log('✅ Socket connected');
-      }
+      console.log('✅ Socket connected');
     });
 
     newSocket.on('disconnect', () => {
-      // ✅ Désactivé pour éviter le bruit dans la console
-      // console.log('🔌 Socket disconnected');
+      console.log('🔌 Socket disconnected');
     });
 
     newSocket.on('connect_error', (error) => {
-      // ✅ Log uniquement en développement
-      if (import.meta.env.DEV) {
-        console.error('❌ Socket connection error:', error);
-      }
+      console.error('❌ Socket connection error:', error.message);
     });
 
     setSocket(newSocket);

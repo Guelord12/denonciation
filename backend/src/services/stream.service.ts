@@ -1,5 +1,5 @@
 // =====================================================
-// SERVICE DE STREAMING - VERSION SANS FFMPEG (WEBRTC)
+// SERVICE DE STREAMING - VERSION ROBUSTE AVEC TIMEOUTS
 // =====================================================
 import { logger } from '../utils/logger';
 import { io } from '../index';
@@ -8,7 +8,7 @@ import fs from 'fs';
 import path from 'path';
 
 // =====================================================
-// TYPES PERSONNALISÉS POUR WEBRTC (évite l'erreur TypeScript)
+// TYPES PERSONNALISÉS POUR WEBRTC
 // =====================================================
 interface WebRTCOffer {
   type: 'offer';
@@ -34,13 +34,31 @@ interface StreamRoom {
   broadcasterId: string;
   viewers: Set<string>;
   startTime: Date;
+  heartbeatInterval?: NodeJS.Timeout;
+  connectionTimeout?: NodeJS.Timeout;
 }
+
+// =====================================================
+// CONSTANTES DE CONFIGURATION
+// =====================================================
+const CONFIG = {
+  // Délai maximum pour établir une connexion WebRTC (30 secondes)
+  WEBRTC_CONNECTION_TIMEOUT: 30000,
+  // Intervalle de heartbeat pour vérifier les connexions (10 secondes)
+  HEARTBEAT_INTERVAL: 10000,
+  // Délai avant de considérer un stream comme zombie (60 secondes sans heartbeat)
+  ZOMBIE_STREAM_TIMEOUT: 60000,
+  // Délai de nettoyage des spectateurs inactifs (30 secondes)
+  VIEWER_INACTIVITY_TIMEOUT: 30000,
+};
 
 // =====================================================
 // GESTION DES STREAMS EN MÉMOIRE
 // =====================================================
 const activeStreams = new Map<string, StreamRoom>();
 const streamViewers = new Map<string, Set<string>>();
+const viewerLastSeen = new Map<string, Date>(); // Pour le nettoyage des inactifs
+const pendingConnections = new Map<string, NodeJS.Timeout>(); // Timeouts de connexion
 
 // =====================================================
 // INITIALISATION DU SERVEUR DE STREAMING
@@ -58,9 +76,113 @@ export function initializeStreamServer(): void {
   // Configurer les gestionnaires WebSocket pour le streaming
   setupStreamingHandlers();
   
+  // Démarrer le nettoyage périodique des streams zombies
+  startZombieStreamCleanup();
+  
+  // Démarrer le nettoyage des spectateurs inactifs
+  startInactiveViewerCleanup();
+  
   logger.info('✅ WebRTC streaming server initialized successfully');
   logger.info('   📡 WebRTC signaling ready');
   logger.info('   🎬 Streams can be started without FFmpeg');
+  logger.info(`   ⏱️  Connection timeout: ${CONFIG.WEBRTC_CONNECTION_TIMEOUT / 1000}s`);
+  logger.info(`   💓 Heartbeat interval: ${CONFIG.HEARTBEAT_INTERVAL / 1000}s`);
+}
+
+// =====================================================
+// NETTOYAGE DES STREAMS ZOMBIES
+// =====================================================
+function startZombieStreamCleanup(): void {
+  setInterval(() => {
+    const now = new Date();
+    activeStreams.forEach((room, streamId) => {
+      const streamAge = now.getTime() - room.startTime.getTime();
+      
+      // Si le stream a plus de 60 secondes et 0 spectateurs, le nettoyer
+      if (streamAge > CONFIG.ZOMBIE_STREAM_TIMEOUT && room.viewers.size === 0) {
+        logger.warn(`🧟 Zombie stream detected: ${streamId}, cleaning up...`);
+        cleanupStream(streamId, 'Zombie stream (no viewers)');
+      }
+    });
+  }, 30000); // Toutes les 30 secondes
+}
+
+// =====================================================
+// NETTOYAGE DES SPECTATEURS INACTIFS
+// =====================================================
+function startInactiveViewerCleanup(): void {
+  setInterval(() => {
+    const now = new Date();
+    viewerLastSeen.forEach((lastSeen, socketId) => {
+      const inactivityTime = now.getTime() - lastSeen.getTime();
+      if (inactivityTime > CONFIG.VIEWER_INACTIVITY_TIMEOUT) {
+        logger.debug(`🧹 Removing inactive viewer: ${socketId}`);
+        
+        // Trouver quel stream ce spectateur regardait
+        streamViewers.forEach((viewers, streamId) => {
+          if (viewers.has(socketId)) {
+            viewers.delete(socketId);
+            updateViewerCountInRoom(streamId);
+          }
+        });
+        
+        viewerLastSeen.delete(socketId);
+      }
+    });
+  }, 15000); // Toutes les 15 secondes
+}
+
+// =====================================================
+// NETTOYAGE D'UN STREAM
+// =====================================================
+function cleanupStream(streamId: string, reason: string): void {
+  const room = activeStreams.get(streamId);
+  if (!room) return;
+  
+  // Annuler les timeouts
+  if (room.heartbeatInterval) clearInterval(room.heartbeatInterval);
+  if (room.connectionTimeout) clearTimeout(room.connectionTimeout);
+  
+  // Notifier tous les spectateurs
+  io.to(`stream:${streamId}`).emit('stream_ended', {
+    streamId,
+    message: reason || 'Le stream est terminé'
+  });
+  
+  io.emit('stream_ended_global', { streamId });
+  
+  // Mettre à jour la base de données
+  query(
+    `UPDATE live_streams 
+     SET status = 'ended', 
+         end_time = NOW(),
+         updated_at = NOW()
+     WHERE id = $1`,
+    [streamId]
+  ).catch(err => logger.error('Failed to update stream end status:', err));
+  
+  // Nettoyer les données en mémoire
+  activeStreams.delete(streamId);
+  streamViewers.delete(streamId);
+  
+  logger.info(`🛑 Stream ${streamId} cleaned up: ${reason}`);
+}
+
+// =====================================================
+// MISE À JOUR DU COMPTEUR DE SPECTATEURS DANS UNE ROOM
+// =====================================================
+function updateViewerCountInRoom(streamId: string): void {
+  const viewers = streamViewers.get(streamId);
+  const count = viewers?.size || 0;
+  
+  io.to(`stream:${streamId}`).emit('viewer_count_update', {
+    streamId,
+    count
+  });
+  
+  updateViewerCount(streamId, count).catch(err => {
+    logger.error('Failed to update viewer count:', err);
+  });
 }
 
 // =====================================================
@@ -77,6 +199,17 @@ function setupStreamingHandlers(): void {
     socket.data.userId = userId;
     socket.data.username = username;
     
+    // Enregistrer le temps de dernière activité
+    viewerLastSeen.set(socket.id, new Date());
+    
+    // =====================================================
+    // HEARTBEAT - Maintien de la connexion
+    // =====================================================
+    socket.on('heartbeat', () => {
+      viewerLastSeen.set(socket.id, new Date());
+      socket.emit('heartbeat_ack');
+    });
+    
     // =====================================================
     // REJOINDRE UN STREAM (SPECTATEUR)
     // =====================================================
@@ -89,19 +222,12 @@ function setupStreamingHandlers(): void {
       
       const viewers = streamViewers.get(streamId)!;
       viewers.add(socket.id);
+      viewerLastSeen.set(socket.id, new Date());
       
       // Mettre à jour le compteur de spectateurs
-      io.to(`stream:${streamId}`).emit('viewer_count_update', {
-        streamId,
-        count: viewers.size
-      });
+      updateViewerCountInRoom(streamId);
       
       // Enregistrer dans la base de données
-      updateViewerCount(streamId, viewers.size).catch(err => {
-        logger.error('Failed to update viewer count:', err);
-      });
-      
-      // Ajouter à la table live_viewers
       if (userId) {
         query(
           `INSERT INTO live_viewers (stream_id, user_id, joined_at, last_seen_at)
@@ -109,6 +235,22 @@ function setupStreamingHandlers(): void {
            ON CONFLICT (stream_id, user_id) DO UPDATE SET last_seen_at = NOW()`,
           [streamId, userId]
         ).catch(err => logger.error('Failed to insert viewer:', err));
+      }
+      
+      // Informer le spectateur si le stream est actif
+      const room = activeStreams.get(streamId);
+      if (room) {
+        socket.emit('stream_status', { 
+          streamId, 
+          status: 'active', 
+          broadcasterReady: true 
+        });
+      } else {
+        socket.emit('stream_status', { 
+          streamId, 
+          status: 'waiting', 
+          broadcasterReady: false 
+        });
       }
       
       logger.info(`👤 Viewer ${socket.id} joined stream ${streamId} (total: ${viewers.size})`);
@@ -123,16 +265,7 @@ function setupStreamingHandlers(): void {
       const viewers = streamViewers.get(streamId);
       if (viewers) {
         viewers.delete(socket.id);
-        
-        io.to(`stream:${streamId}`).emit('viewer_count_update', {
-          streamId,
-          count: viewers.size
-        });
-        
-        updateViewerCount(streamId, viewers.size).catch(err => {
-          logger.error('Failed to update viewer count:', err);
-        });
-        
+        updateViewerCountInRoom(streamId);
         logger.info(`👋 Viewer ${socket.id} left stream ${streamId} (remaining: ${viewers.size})`);
       }
       
@@ -146,22 +279,56 @@ function setupStreamingHandlers(): void {
     });
     
     // =====================================================
-    // DÉMARRER LA DIFFUSION (STREAMER)
+    // DÉMARRER LA DIFFUSION (STREAMER) - AVEC TIMEOUT
     // =====================================================
     socket.on('start_broadcast', async (data: { streamId: string; userId?: number }) => {
       const { streamId } = data;
       
+      logger.info(`🎥 Broadcast starting for stream ${streamId} by ${socket.id}`);
+      
       socket.join(`broadcaster:${streamId}`);
       
+      // Annuler tout timeout existant
+      const existingTimeout = pendingConnections.get(streamId);
+      if (existingTimeout) {
+        clearTimeout(existingTimeout);
+        pendingConnections.delete(streamId);
+      }
+      
       // Créer ou mettre à jour la room
-      if (!activeStreams.has(streamId)) {
-        activeStreams.set(streamId, {
+      let room = activeStreams.get(streamId);
+      if (!room) {
+        room = {
           streamId,
           broadcasterId: socket.id,
           viewers: new Set(),
           startTime: new Date()
-        });
+        };
+        activeStreams.set(streamId, room);
       }
+      
+      // ✅ AMÉLIORATION : Configurer le heartbeat pour ce stream
+      if (room.heartbeatInterval) clearInterval(room.heartbeatInterval);
+      room.heartbeatInterval = setInterval(() => {
+        // Vérifier si le streamer est toujours connecté
+        const broadcasterSocket = io.sockets.sockets.get(room!.broadcasterId);
+        if (!broadcasterSocket) {
+          logger.warn(`⚠️ Broadcaster ${room!.broadcasterId} disconnected for stream ${streamId}`);
+          cleanupStream(streamId, 'Broadcaster disconnected');
+        }
+      }, CONFIG.HEARTBEAT_INTERVAL);
+      
+      // ✅ AMÉLIORATION : Timeout de connexion WebRTC
+      room.connectionTimeout = setTimeout(() => {
+        const currentRoom = activeStreams.get(streamId);
+        if (currentRoom && currentRoom.viewers.size === 0) {
+          logger.warn(`⏰ No viewers connected to stream ${streamId} after ${CONFIG.WEBRTC_CONNECTION_TIMEOUT / 1000}s`);
+          // On ne termine pas le stream, mais on notifie le streamer
+          io.to(currentRoom.broadcasterId).emit('no_viewers_warning', {
+            message: 'Aucun spectateur connecté'
+          });
+        }
+      }, CONFIG.WEBRTC_CONNECTION_TIMEOUT);
       
       // Mettre à jour le statut dans la base de données
       try {
@@ -180,8 +347,13 @@ function setupStreamingHandlers(): void {
       }
       
       // Notifier les spectateurs potentiels
-      io.emit('new_stream', { streamId });
-      socket.broadcast.emit('stream_started', { streamId });
+      io.emit('new_stream', { streamId, broadcaster: socket.id });
+      
+      // Informer les spectateurs déjà dans la room que le streamer est prêt
+      io.to(`stream:${streamId}`).emit('broadcaster_ready', {
+        streamId,
+        broadcasterId: socket.id
+      });
       
       logger.info(`🎥 Broadcast started for stream ${streamId} by ${socket.id}`);
     });
@@ -193,15 +365,23 @@ function setupStreamingHandlers(): void {
       // Relayer les données à tous les spectateurs
       socket.to(`stream:${data.streamId}`).emit('stream_chunk', {
         streamId: data.streamId,
-        chunk: data.chunk
+        chunk: data.chunk,
+        timestamp: Date.now()
       });
     });
     
     // =====================================================
-    // OFFRE WEBRTC (STREAMER -> SPECTATEURS)
+    // OFFRE WEBRTC (STREAMER -> SPECTATEUR)
     // =====================================================
     socket.on('webrtc_offer', (data: { streamId: string; offer: WebRTCOffer }) => {
       logger.debug(`📡 WebRTC offer from ${socket.id} for stream ${data.streamId}`);
+      
+      // ✅ AMÉLIORATION : Vérifier que le stream existe
+      const room = activeStreams.get(data.streamId);
+      if (!room || room.broadcasterId !== socket.id) {
+        logger.warn(`⚠️ Offer from unauthorized broadcaster: ${socket.id}`);
+        return;
+      }
       
       // Relayer l'offre à tous les spectateurs du stream
       socket.to(`stream:${data.streamId}`).emit('webrtc_offer', {
@@ -223,13 +403,38 @@ function setupStreamingHandlers(): void {
     });
     
     // =====================================================
-    // CANDIDAT ICE WEBRTC
+    // CANDIDAT ICE WEBRTC - AVEC GESTION D'ERREURS
     // =====================================================
     socket.on('webrtc_ice_candidate', (data: { targetId: string; candidate: WebRTCIceCandidate }) => {
+      // ✅ AMÉLIORATION : Validation du candidate
+      if (!data.candidate || !data.candidate.candidate) {
+        logger.debug(`⚠️ Invalid ICE candidate from ${socket.id}`);
+        return;
+      }
+      
       io.to(data.targetId).emit('webrtc_ice_candidate', {
         socketId: socket.id,
         candidate: data.candidate
       });
+    });
+    
+    // =====================================================
+    // STATUT DE LA CONNEXION WEBRTC
+    // =====================================================
+    socket.on('webrtc_connection_status', (data: { streamId: string; status: string; error?: string }) => {
+      logger.debug(`📊 WebRTC status from ${socket.id}: ${data.status}`);
+      
+      if (data.status === 'failed' || data.status === 'disconnected') {
+        logger.warn(`⚠️ WebRTC ${data.status} for ${socket.id}: ${data.error || 'Unknown error'}`);
+        
+        // Si c'est le streamer qui a un problème
+        const room = activeStreams.get(data.streamId);
+        if (room && room.broadcasterId === socket.id) {
+          io.to(`stream:${data.streamId}`).emit('broadcaster_issue', {
+            message: 'Problème de connexion avec le streamer, tentative de reconnexion...'
+          });
+        }
+      }
     });
     
     // =====================================================
@@ -266,7 +471,6 @@ function setupStreamingHandlers(): void {
     // =====================================================
     socket.on('like_stream', async (data: { streamId: string; userId?: number }) => {
       try {
-        // Vérifier si l'utilisateur a déjà liké
         if (data.userId) {
           const existingLike = await query(
             `SELECT id FROM stream_likes WHERE stream_id = $1 AND user_id = $2`,
@@ -274,24 +478,20 @@ function setupStreamingHandlers(): void {
           );
           
           if (existingLike.rows.length > 0) {
-            // Déjà liké, on ignore
             return;
           }
           
-          // Ajouter le like
           await query(
             `INSERT INTO stream_likes (stream_id, user_id, created_at) VALUES ($1, $2, NOW())`,
             [data.streamId, data.userId]
           );
         }
         
-        // Mettre à jour le compteur de likes
         await query(
           `UPDATE live_streams SET like_count = like_count + 1 WHERE id = $1`,
           [data.streamId]
         );
         
-        // Récupérer le nouveau compte
         const result = await query(
           `SELECT like_count FROM live_streams WHERE id = $1`,
           [data.streamId]
@@ -299,7 +499,6 @@ function setupStreamingHandlers(): void {
         
         const likeCount = result.rows[0]?.like_count || 0;
         
-        // Notifier tous les spectateurs
         io.to(`stream:${data.streamId}`).emit('like_update', { count: likeCount });
         
         logger.debug(`❤️ Like on stream ${data.streamId} (total: ${likeCount})`);
@@ -328,7 +527,6 @@ function setupStreamingHandlers(): void {
         
         const superChat = result.rows[0];
         
-        // Récupérer les infos utilisateur
         const userResult = await query(
           `SELECT username, avatar FROM users WHERE id = $1`,
           [data.userId]
@@ -340,7 +538,6 @@ function setupStreamingHandlers(): void {
           avatar: userResult.rows[0]?.avatar
         };
         
-        // Diffuser à tous
         io.to(`stream:${data.streamId}`).emit('new_super_chat', enrichedSuperChat);
         
         logger.info(`💎 Super Chat in stream ${data.streamId}: ${data.amount}€`);
@@ -353,9 +550,6 @@ function setupStreamingHandlers(): void {
     // LISTE DES SPECTATEURS
     // =====================================================
     socket.on('get_viewers', async (data: { streamId: string }) => {
-      const viewers = streamViewers.get(data.streamId) || new Set();
-      
-      // Récupérer les infos des utilisateurs depuis la base
       try {
         const result = await query(
           `SELECT DISTINCT u.id, u.username, u.avatar
@@ -367,13 +561,7 @@ function setupStreamingHandlers(): void {
         
         socket.emit('viewers_list', { viewers: result.rows });
       } catch (error) {
-        // Fallback avec les socket IDs
-        const viewerList = Array.from(viewers).map(socketId => ({
-          socketId,
-          username: `Viewer_${socketId.substring(0, 4)}`
-        }));
-        
-        socket.emit('viewers_list', { viewers: viewerList });
+        socket.emit('viewers_list', { viewers: [] });
       }
     });
     
@@ -383,35 +571,12 @@ function setupStreamingHandlers(): void {
     socket.on('end_broadcast', async (data: { streamId: string }) => {
       const { streamId } = data;
       
-      // Notifier tous les spectateurs
-      io.to(`stream:${streamId}`).emit('stream_ended', {
-        streamId,
-        message: 'Le stream est terminé'
-      });
-      
-      io.emit('stream_ended_global', { streamId });
-      
-      // Mettre à jour la base de données
-      try {
-        await query(
-          `UPDATE live_streams 
-           SET status = 'ended', 
-               end_time = NOW(),
-               updated_at = NOW()
-           WHERE id = $1`,
-          [streamId]
-        );
-        
-        logger.info(`✅ Stream ${streamId} ended and status updated`);
-      } catch (error) {
-        logger.error('Failed to update stream end status:', error);
+      const room = activeStreams.get(streamId);
+      if (room && room.broadcasterId === socket.id) {
+        cleanupStream(streamId, 'Stream terminé par le diffuseur');
+      } else {
+        logger.warn(`⚠️ Unauthorized attempt to end stream ${streamId} by ${socket.id}`);
       }
-      
-      // Nettoyer les données en mémoire
-      activeStreams.delete(streamId);
-      streamViewers.delete(streamId);
-      
-      logger.info(`🛑 Broadcast ended for stream ${streamId}`);
     });
     
     // =====================================================
@@ -427,7 +592,6 @@ function setupStreamingHandlers(): void {
         
         logger.info(`🚨 Stream ${data.streamId} reported by user ${data.userId}: ${data.reason}`);
         
-        // Notifier les modérateurs
         io.to('moderators').emit('new_report', {
           streamId: data.streamId,
           reason: data.reason
@@ -445,44 +609,18 @@ function setupStreamingHandlers(): void {
       streamViewers.forEach((viewers, streamId) => {
         if (viewers.has(socket.id)) {
           viewers.delete(socket.id);
-          
-          io.to(`stream:${streamId}`).emit('viewer_count_update', {
-            streamId,
-            count: viewers.size
-          });
-          
-          updateViewerCount(streamId, viewers.size).catch(err => {
-            logger.error('Failed to update viewer count on disconnect:', err);
-          });
+          updateViewerCountInRoom(streamId);
         }
       });
       
       // Vérifier si c'était un streamer
       activeStreams.forEach((room, streamId) => {
         if (room.broadcasterId === socket.id) {
-          // Le streamer s'est déconnecté, terminer le stream
-          io.to(`stream:${streamId}`).emit('stream_ended', {
-            streamId,
-            message: 'Le streamer s\'est déconnecté'
-          });
-          
-          io.emit('stream_ended_global', { streamId });
-          
-          activeStreams.delete(streamId);
-          streamViewers.delete(streamId);
-          
-          // Mettre à jour la base de données
-          query(
-            `UPDATE live_streams 
-             SET status = 'ended', 
-                 end_time = NOW()
-             WHERE id = $1`,
-            [streamId]
-          ).catch(err => logger.error('Failed to update stream on disconnect:', err));
-          
-          logger.info(`🛑 Stream ${streamId} ended due to broadcaster disconnect`);
+          cleanupStream(streamId, 'Streamer déconnecté');
         }
       });
+      
+      viewerLastSeen.delete(socket.id);
       
       logger.debug(`🔌 Streaming client disconnected: ${socket.id}`);
     });
@@ -503,7 +641,6 @@ async function updateViewerCount(streamId: string, count: number): Promise<void>
       [count, streamId]
     );
     
-    // Enregistrer dans les analytics
     await query(
       `INSERT INTO stream_analytics (stream_id, viewer_count, timestamp)
        VALUES ($1, $2, NOW())`,

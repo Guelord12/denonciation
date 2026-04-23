@@ -2,11 +2,26 @@ export const APP_NAME = 'Dénonciation';
 export const APP_VERSION = '1.0.0';
 export const APP_DESCRIPTION = 'Plateforme de signalement d\'abus et d\'injustices';
 
-export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000';
+// ✅ CORRECTION : URL absolue en production
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? 'http://16.171.39.76:5000/api' : 'http://localhost:5000/api');
 
-export const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=EF4444&color=fff';
-export const DEFAULT_THUMBNAIL = '/images/default-thumbnail.jpg';
+export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 
+  (import.meta.env.PROD ? 'http://16.171.39.76:5000' : 'http://localhost:5000');
+
+// ✅ CORRECTION : Avatar par défaut utilisant UI Avatars (fonctionne toujours)
+export const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=EF4444&color=fff&size=128';
+export const DEFAULT_THUMBNAIL = 'https://via.placeholder.com/800x450/EF4444/FFFFFF?text=Dénonciation';
+
+// ✅ Fonction utilitaire pour générer un avatar avec initiales
+export const getAvatarUrl = (name: string, size: number = 128): string => {
+  return `https://ui-avatars.com/api/?background=EF4444&color=fff&size=${size}&name=${encodeURIComponent(name)}`;
+};
+
+// ✅ Fonction utilitaire pour générer un avatar pour les signalements anonymes
+export const getAnonymousAvatar = (size: number = 128): string => {
+  return `https://ui-avatars.com/api/?background=9CA3AF&color=fff&size=${size}&name=Anonyme`;
+};
 
 export const CATEGORIES = [
   { id: 1, name: 'Corruption', icon: '💰', color: '#e74c3c' },
@@ -30,6 +45,7 @@ export const REPORT_STATUS = {
 export const STREAM_STATUS = {
   active: { label: 'En direct', color: '#EF4444' },
   ended: { label: 'Terminé', color: '#6B7280' },
+  scheduled: { label: 'Programmé', color: '#3B82F6' },
   cancelled: { label: 'Annulé', color: '#F59E0B' },
 } as const;
 
@@ -42,11 +58,12 @@ export const NOTIFICATION_TYPES = {
   new_live: 'Nouveau live',
   report_status: 'Statut du signalement',
   system: 'Système',
+  moderation_resolved: 'Modération résolue',
 } as const;
 
 export const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-export const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime'];
+export const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm'];
 
 export const PAGINATION = {
   DEFAULT_PAGE: 1,
@@ -58,6 +75,8 @@ export const ROUTES = {
   HOME: '/',
   LOGIN: '/login',
   REGISTER: '/register',
+  FORGOT_PASSWORD: '/forgot-password',
+  RESET_PASSWORD: '/reset-password/:token',
   DASHBOARD: '/dashboard',
   REPORTS: '/reports',
   REPORT_DETAIL: '/reports/:id',
@@ -76,4 +95,18 @@ export const ROUTES = {
     ANALYTICS: '/admin/analytics',
     SETTINGS: '/admin/settings',
   },
+} as const;
+
+// ✅ Configuration des timeouts
+export const API_TIMEOUT = 30000; // 30 secondes
+export const SOCKET_TIMEOUT = 20000; // 20 secondes
+
+// ✅ Messages d'erreur courants
+export const ERROR_MESSAGES = {
+  NETWORK_ERROR: 'Erreur de connexion. Vérifiez votre internet.',
+  SERVER_ERROR: 'Erreur serveur. Veuillez réessayer plus tard.',
+  UNAUTHORIZED: 'Vous devez être connecté pour accéder à cette page.',
+  FORBIDDEN: 'Vous n\'avez pas les droits pour accéder à cette page.',
+  NOT_FOUND: 'La ressource demandée n\'existe pas.',
+  VALIDATION_ERROR: 'Veuillez vérifier les champs du formulaire.',
 } as const;

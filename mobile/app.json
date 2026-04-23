@@ -69,18 +69,17 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "your-project-id"
+        "projectId": "44c4f747-331a-49c1-9d82-aa189222a115"
       }
     },
-    "runtimeVersion": {
-      "policy": "sdkVersion"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
-      "url": "https://u.expo.dev/your-project-id",
+      "url": "https://u.expo.dev/44c4f747-331a-49c1-9d82-aa189222a115",
       "enabled": true,
       "fallbackToCacheTimeout": 0,
       "checkAutomatically": "ON_LOAD"
     },
-    "newArchEnabled": true
+    "newArchEnabled": true,
+    "owner": "galadji12"
   }
 }

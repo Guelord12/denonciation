@@ -3,20 +3,26 @@ import { io, Socket } from 'socket.io-client';
 import { Platform } from 'react-native';
 import { useAuthStore } from '../stores/authStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_BASE_URL } from '../config/constants';
+import { SOCKET_URL as CONFIG_SOCKET_URL } from '../config/constants';
 
-// ✅ URL du socket en fonction de la plateforme
+// ✅ Configuration des serveurs
+const DEV_SERVER_IP = '192.168.131.90';
+const PROD_SERVER_IP = '16.171.39.76';
+const SERVER_PORT = '5000';
+
+// ✅ URL du socket en fonction de l'environnement
 const getSocketUrl = () => {
   if (__DEV__) {
-    // En développement
-    return Platform.select({
-      ios: 'http://192.168.131.90:5000',
-      android: 'http://192.168.131.90:5000',
-      default: 'http://192.168.131.90:5000',
-    });
+    // En développement : utiliser l'IP locale
+    const devUrl = `http://${DEV_SERVER_IP}:${SERVER_PORT}`;
+    console.log('📱 Development Socket URL:', devUrl);
+    return devUrl;
   }
-  // En production
-  return 'https://api.denonciation.com';
+  
+  // ✅ En production : utiliser le serveur AWS
+  const prodUrl = `http://${PROD_SERVER_IP}:${SERVER_PORT}`;
+  console.log('🌐 Production Socket URL:', prodUrl);
+  return prodUrl;
 };
 
 const SOCKET_URL = getSocketUrl();
@@ -79,6 +85,12 @@ export function useSocket(): UseSocketReturn {
     if (refreshToken) {
       try {
         console.log('🔄 Attempting to refresh token...');
+        
+        // ✅ Utiliser l'URL de l'API depuis les constantes
+        const API_BASE_URL = __DEV__ 
+          ? `http://${DEV_SERVER_IP}:${SERVER_PORT}/api`
+          : `http://${PROD_SERVER_IP}:${SERVER_PORT}/api`;
+          
         const refreshUrl = `${API_BASE_URL}/auth/refresh`;
         
         const response = await fetch(refreshUrl, {
@@ -91,14 +103,14 @@ export function useSocket(): UseSocketReturn {
           const data = await response.json();
           
           // Stocker le nouveau token
-          await AsyncStorage.setItem('accessToken', data.accessToken);
+          await AsyncStorage.setItem('accessToken', data.accessToken || data.access);
           if (data.expiresIn) {
             const expiry = new Date(Date.now() + data.expiresIn * 1000);
             await AsyncStorage.setItem('tokenExpiry', expiry.toISOString());
           }
           
           console.log('✅ Token refreshed successfully');
-          return data.accessToken;
+          return data.accessToken || data.access;
         } else {
           console.error('❌ Token refresh failed:', response.status);
         }
@@ -255,16 +267,15 @@ export function useSocket(): UseSocketReturn {
     // =====================================================
 
     newSocket.on('new_stream', (data) => {
-      console.log('📡 New stream event received:', data);
+      console.log('📡 New stream event received');
     });
 
     newSocket.on('stream_ended_global', (data) => {
-      console.log('📡 Stream ended event received:', data);
+      console.log('📡 Stream ended event received');
     });
 
     newSocket.on('viewer_count_update', (data) => {
       // Silencieux pour éviter le spam
-      // console.log('📡 Viewer count update:', data);
     });
 
     newSocket.on('new_chat_message', (data) => {
@@ -298,7 +309,6 @@ export function useSocket(): UseSocketReturn {
 
     newSocket.io.engine.on('packet', (packet) => {
       // Silencieux - pour déboguer uniquement
-      // console.log('📦 Socket packet:', packet.type);
     });
 
     socketRef.current = newSocket;

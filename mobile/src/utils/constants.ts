@@ -1,23 +1,28 @@
 import { Platform } from 'react-native';
 
+// ✅ Configuration des serveurs
+const DEV_SERVER_IP = '192.168.131.90';
+const PROD_SERVER_IP = '16.171.39.76';
+const SERVER_PORT = '5000';
+
 export const APP_NAME = 'Dénonciation';
 export const APP_VERSION = '1.0.0';
 
 export const API_URL = __DEV__
   ? Platform.select({
-      ios: 'http://localhost:5000/api',
-      android: 'http://10.0.2.2:5000/api',
-      default: 'http://localhost:5000/api',
+      ios: `http://${DEV_SERVER_IP}:${SERVER_PORT}/api`,
+      android: `http://${DEV_SERVER_IP}:${SERVER_PORT}/api`,
+      default: `http://${DEV_SERVER_IP}:${SERVER_PORT}/api`,
     })
-  : 'https://api.denonciation.com/api';
+  : `http://${PROD_SERVER_IP}:${SERVER_PORT}/api`;
 
 export const SOCKET_URL = __DEV__
   ? Platform.select({
-      ios: 'http://localhost:5000',
-      android: 'http://10.0.2.2:5000',
-      default: 'http://localhost:5000',
+      ios: `http://${DEV_SERVER_IP}:${SERVER_PORT}`,
+      android: `http://${DEV_SERVER_IP}:${SERVER_PORT}`,
+      default: `http://${DEV_SERVER_IP}:${SERVER_PORT}`,
     })
-  : 'https://api.denonciation.com';
+  : `http://${PROD_SERVER_IP}:${SERVER_PORT}`;
 
 export const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=EF4444&color=fff';
 
