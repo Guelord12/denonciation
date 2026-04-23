@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { liveAPI } from '../services/api';
-import { useSocket } from '../hooks/useSocket';
+import { socketService } from '../services/socket';
 import { useAuthStore } from '../stores/authStore';
 import {
   Video,
@@ -28,6 +28,9 @@ import {
   LayoutGrid,
   List,
   SlidersHorizontal,
+  Loader2,
+  RefreshCw,
+  AlertCircle,
   ArrowUp,
   ArrowDown,
 } from 'lucide-react';
@@ -40,6 +43,7 @@ interface LiveStream {
   title: string;
   description?: string;
   thumbnail_url?: string;
+  thumbnail_path?: string;
   username: string;
   avatar?: string;
   viewer_count: number;
@@ -53,6 +57,7 @@ interface LiveStream {
   current_viewers: number;
   tags?: string[];
   category?: string;
+  user_id?: number;
 }
 
 interface Category {
@@ -78,7 +83,6 @@ const CATEGORIES: Category[] = [
 
 export default function LiveStreams() {
   const { isAuthenticated, user } = useAuthStore();
-  const socket = useSocket();
   const navigate = useNavigate();
   
   // États
@@ -93,22 +97,36 @@ export default function LiveStreams() {
   const [premiumOnly, setPremiumOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Requête pour récupérer les streams
-  const { data, isLoading, refetch, isFetching } = useQuery({
+  const { data, isLoading, isFetching, refetch, isError } = useQuery({
     queryKey: ['live-streams', page, selectedCategory, sortBy, premiumOnly, searchQuery],
-    queryFn: () => liveAPI.getStreams({
-      page,
-      limit: 20,
-      category: selectedCategory !== 'all' ? selectedCategory : undefined,
-      premium: premiumOnly || undefined,
-      search: searchQuery || undefined,
-      sort: sortBy,
-    }).then(res => res.data),
+    queryFn: async () => {
+      try {
+        console.log('🔍 Fetching streams...');
+        const response = await liveAPI.getStreams({
+          page,
+          limit: 20,
+          category: selectedCategory !== 'all' ? selectedCategory : undefined,
+          premium: premiumOnly || undefined,
+          search: searchQuery || undefined,
+          sort: sortBy,
+          status: 'active,scheduled',
+        });
+        console.log('✅ Streams response:', response.data);
+        setError(null);
+        return response.data;
+      } catch (err: any) {
+        console.error('❌ Error fetching streams:', err);
+        setError(err.response?.data?.error || 'Erreur lors du chargement des lives');
+        throw err;
+      }
+    },
     onSuccess: (data) => {
-      // Séparer les streams actifs et programmés
-      const active = data.streams.filter((s: LiveStream) => s.status === 'active');
-      const scheduled = data.streams.filter((s: LiveStream) => s.status === 'scheduled');
+      const streams = data.streams || [];
+      const active = streams.filter((s: LiveStream) => s.status === 'active');
+      const scheduled = streams.filter((s: LiveStream) => s.status === 'scheduled');
       
       if (page === 1) {
         setActiveStreams(active);
@@ -118,45 +136,62 @@ export default function LiveStreams() {
         setScheduledStreams(prev => [...prev, ...scheduled]);
       }
       
-      setTotalViewers(active.reduce((sum: number, s: LiveStream) => sum + (s.current_viewers || 0), 0));
-      setHasMore(data.pagination.has_more);
+      setTotalViewers(active.reduce((sum: number, s: LiveStream) => sum + (s.current_viewers || s.viewer_count || 0), 0));
+      setHasMore(data.pagination?.has_more || false);
     },
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // WebSocket pour mises à jour en temps réel
   useEffect(() => {
+    const socket = socketService.getSocket();
     if (!socket) return;
 
-    socket.on('new_stream', (stream: LiveStream) => {
+    const handleNewStream = (stream: LiveStream) => {
       if (stream.status === 'active') {
-        setActiveStreams(prev => [stream, ...prev]);
+        setActiveStreams(prev => {
+          if (prev.find(s => s.id === stream.id)) return prev;
+          return [stream, ...prev];
+        });
       } else if (stream.status === 'scheduled') {
-        setScheduledStreams(prev => [stream, ...prev]);
+        setScheduledStreams(prev => {
+          if (prev.find(s => s.id === stream.id)) return prev;
+          return [stream, ...prev];
+        });
       }
-    });
+    };
 
-    socket.on('stream_ended_global', ({ streamId }: { streamId: string }) => {
+    const handleStreamEnded = ({ streamId }: { streamId: string }) => {
       setActiveStreams(prev => prev.filter(s => s.id !== parseInt(streamId)));
-    });
+    };
 
-    socket.on('viewer_count_update', ({ streamId, count }: { streamId: string; count: number }) => {
+    const handleViewerCountUpdate = ({ streamId, count }: { streamId: string; count: number }) => {
       setActiveStreams(prev => prev.map(s => 
         s.id === parseInt(streamId) ? { ...s, current_viewers: count } : s
       ));
-    });
+    };
 
-    socket.on('stream_went_live', (stream: LiveStream) => {
+    const handleStreamWentLive = (stream: LiveStream) => {
       setScheduledStreams(prev => prev.filter(s => s.id !== stream.id));
-      setActiveStreams(prev => [stream, ...prev]);
-    });
+      setActiveStreams(prev => {
+        if (prev.find(s => s.id === stream.id)) return prev;
+        return [stream, ...prev];
+      });
+    };
+
+    socket.on('new_stream', handleNewStream);
+    socket.on('stream_ended_global', handleStreamEnded);
+    socket.on('viewer_count_update', handleViewerCountUpdate);
+    socket.on('stream_went_live', handleStreamWentLive);
 
     return () => {
-      socket.off('new_stream');
-      socket.off('stream_ended_global');
-      socket.off('viewer_count_update');
-      socket.off('stream_went_live');
+      socket.off('new_stream', handleNewStream);
+      socket.off('stream_ended_global', handleStreamEnded);
+      socket.off('viewer_count_update', handleViewerCountUpdate);
+      socket.off('stream_went_live', handleStreamWentLive);
     };
-  }, [socket]);
+  }, []);
 
   // Charger plus de streams
   const loadMore = useCallback(() => {
@@ -170,17 +205,37 @@ export default function LiveStreams() {
     setPage(1);
     setActiveStreams([]);
     setScheduledStreams([]);
+    setError(null);
   }, [selectedCategory, sortBy, premiumOnly, searchQuery]);
-
-  // Obtenir l'icône de catégorie
-  const getCategoryIcon = (categoryId: string) => {
-    return CATEGORIES.find(c => c.id === categoryId)?.icon || '📡';
-  };
 
   // Formater le temps restant
   const formatTimeUntil = (date: string) => {
-    return formatDistance(new Date(date), new Date(), { addSuffix: true, locale: fr });
+    try {
+      return formatDistance(new Date(date), new Date(), { addSuffix: true, locale: fr });
+    } catch {
+      return 'Date invalide';
+    }
   };
+
+  // État d'erreur
+  if (isError || error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">
+          Impossible de charger les lives
+        </h2>
+        <p className="text-gray-600 mb-6">{error || 'Une erreur est survenue'}</p>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          <RefreshCw className="w-5 h-5" />
+          Réessayer
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -203,15 +258,25 @@ export default function LiveStreams() {
               </p>
             </div>
             
-            {isAuthenticated && (
-              <Link
-                to="/live/create"
-                className="btn-primary flex items-center justify-center space-x-2 whitespace-nowrap"
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => refetch()}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                title="Actualiser"
               >
-                <Video className="w-5 h-5" />
-                <span>Démarrer un live</span>
-              </Link>
-            )}
+                <RefreshCw className={`w-5 h-5 ${isFetching ? 'animate-spin' : ''}`} />
+              </button>
+              
+              {isAuthenticated && (
+                <Link
+                  to="/live/create"
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 flex items-center gap-2 font-medium transition"
+                >
+                  <Plus className="w-5 h-5" />
+                  <span>Démarrer un live</span>
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Barre de recherche et filtres */}
@@ -240,7 +305,7 @@ export default function LiveStreams() {
                 onClick={() => setShowFilters(!showFilters)}
                 className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
               >
-                <SlidersHorizontal className="w-4 h-4" />
+                <Filter className="w-4 h-4" />
                 Filtres
               </button>
               
@@ -342,12 +407,6 @@ export default function LiveStreams() {
                   </span>
                 </div>
               </div>
-              <button
-                onClick={() => refetch()}
-                className="text-red-600 hover:text-red-700 text-sm font-medium"
-              >
-                Actualiser
-              </button>
             </div>
           </div>
         )}
@@ -355,7 +414,7 @@ export default function LiveStreams() {
         {/* État de chargement */}
         {isLoading && page === 1 ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+            <Loader2 className="w-12 h-12 text-red-600 animate-spin" />
           </div>
         ) : (
           <>
@@ -367,9 +426,6 @@ export default function LiveStreams() {
                     <Flame className="w-5 h-5 text-red-600" />
                     En direct maintenant
                   </h2>
-                  <Link to="/live/active" className="text-red-600 hover:text-red-700 text-sm font-medium flex items-center gap-1">
-                    Voir tout <ChevronRight className="w-4 h-4" />
-                  </Link>
                 </div>
                 
                 <div className={`grid gap-4 ${
@@ -392,9 +448,6 @@ export default function LiveStreams() {
                     <Calendar className="w-5 h-5 text-blue-600" />
                     Programmés
                   </h2>
-                  <Link to="/live/scheduled" className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
-                    Voir tout <ChevronRight className="w-4 h-4" />
-                  </Link>
                 </div>
                 
                 <div className={`grid gap-4 ${
@@ -403,7 +456,12 @@ export default function LiveStreams() {
                     : 'grid-cols-1'
                 }`}>
                   {scheduledStreams.map((stream) => (
-                    <ScheduledStreamCard key={stream.id} stream={stream} viewMode={viewMode} />
+                    <ScheduledStreamCard 
+                      key={stream.id} 
+                      stream={stream} 
+                      viewMode={viewMode}
+                      formatTimeUntil={formatTimeUntil}
+                    />
                   ))}
                 </div>
               </div>
@@ -414,18 +472,20 @@ export default function LiveStreams() {
               <div className="text-center py-16">
                 <Video className="w-20 h-20 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-medium text-gray-700 mb-2">
-                  Aucun live {searchQuery ? 'correspondant à votre recherche' : 'en cours'}
+                  {searchQuery 
+                    ? 'Aucun live ne correspond à votre recherche'
+                    : 'Aucun live en cours actuellement'}
                 </h3>
                 <p className="text-gray-500 mb-6">
                   {searchQuery 
-                    ? 'Essayez avec d\'autres mots-clés'
+                    ? 'Essayez avec d\'autres mots-clés ou modifiez les filtres'
                     : 'Soyez le premier à lancer un live !'
                   }
                 </p>
                 {isAuthenticated ? (
                   <Link
                     to="/live/create"
-                    className="btn-primary inline-flex items-center space-x-2"
+                    className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 inline-flex items-center gap-2 font-medium"
                   >
                     <Plus className="w-5 h-5" />
                     <span>Démarrer un live</span>
@@ -442,18 +502,18 @@ export default function LiveStreams() {
             )}
 
             {/* Bouton "Charger plus" */}
-            {hasMore && activeStreams.length > 0 && (
+            {hasMore && (activeStreams.length > 0 || scheduledStreams.length > 0) && (
               <div className="text-center mt-8">
                 <button
                   onClick={loadMore}
                   disabled={isFetching}
-                  className="px-6 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                  className="px-6 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center gap-2 mx-auto"
                 >
                   {isFetching ? (
-                    <span className="flex items-center gap-2">
-                      <div className="w-4 h-4 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       Chargement...
-                    </span>
+                    </>
                   ) : (
                     'Charger plus de lives'
                   )}
@@ -463,98 +523,22 @@ export default function LiveStreams() {
           </>
         )}
       </div>
-
-      {/* Sections recommandées */}
-      {activeStreams.length > 0 && (
-        <div className="bg-white border-t py-8 mt-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-3 gap-6">
-              {/* Chaînes recommandées */}
-              <div className="bg-gray-50 rounded-xl p-6">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-500" />
-                  Chaînes recommandées
-                </h3>
-                <div className="space-y-3">
-                  {activeStreams.slice(0, 5).map((stream) => (
-                    <Link
-                      key={stream.id}
-                      to={`/channel/${stream.username}`}
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-white transition"
-                    >
-                      <img
-                        src={stream.avatar || `https://ui-avatars.com/api/?name=${stream.username}`}
-                        alt=""
-                        className="w-10 h-10 rounded-full"
-                      />
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900 flex items-center gap-1">
-                          {stream.channel_name || stream.username}
-                          {stream.channel_verified && (
-                            <CheckCircle className="w-4 h-4 text-blue-500" />
-                          )}
-                        </p>
-                        <p className="text-sm text-gray-500">@{stream.username}</p>
-                      </div>
-                      {stream.is_premium && (
-                        <Crown className="w-4 h-4 text-yellow-500" />
-                      )}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              {/* Top catégories */}
-              <div className="bg-gray-50 rounded-xl p-6">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                  Catégories tendance
-                </h3>
-                <div className="space-y-2">
-                  {CATEGORIES.slice(1, 6).map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className="w-full flex items-center justify-between p-2 rounded-lg hover:bg-white transition"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span>{category.icon}</span>
-                        <span>{category.name}</span>
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        {Math.floor(Math.random() * 50) + 5} lives
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Pour vous */}
-              <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-6">
-                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-purple-600" />
-                  Pour vous
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  Découvrez des lives personnalisés en fonction de vos intérêts
-                </p>
-                <Link
-                  to="/live/discover"
-                  className="inline-flex items-center gap-2 text-red-600 hover:text-red-700 font-medium"
-                >
-                  Explorer <Compass className="w-4 h-4" />
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
 
+// Icône CheckCircle
+const CheckCircle = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+  </svg>
+);
+
 // Composant pour les lives en cours
 function LiveStreamCard({ stream, viewMode }: { stream: LiveStream; viewMode: 'grid' | 'list' }) {
+  const thumbnailUrl = stream.thumbnail_url || stream.thumbnail_path;
+  const avatarUrl = stream.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(stream.username || 'User')}&background=ef4444&color=fff`;
+  
   if (viewMode === 'list') {
     return (
       <Link
@@ -562,12 +546,8 @@ function LiveStreamCard({ stream, viewMode }: { stream: LiveStream; viewMode: 'g
         className="bg-white rounded-lg shadow hover:shadow-md transition overflow-hidden flex"
       >
         <div className="relative w-64 h-36 flex-shrink-0">
-          {stream.thumbnail_url ? (
-            <img
-              src={stream.thumbnail_url}
-              alt={stream.title}
-              className="w-full h-full object-cover"
-            />
+          {thumbnailUrl ? (
+            <img src={thumbnailUrl} alt={stream.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
               <Video className="w-8 h-8 text-white/50" />
@@ -582,7 +562,7 @@ function LiveStreamCard({ stream, viewMode }: { stream: LiveStream; viewMode: 'g
           <div className="absolute bottom-2 left-2">
             <span className="bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center">
               <Users className="w-3 h-3 mr-1" />
-              {stream.current_viewers || 0}
+              {stream.current_viewers || stream.viewer_count || 0}
             </span>
           </div>
         </div>
@@ -590,23 +570,11 @@ function LiveStreamCard({ stream, viewMode }: { stream: LiveStream; viewMode: 'g
         <div className="flex-1 p-4">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1">
-                {stream.title}
-              </h4>
+              <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1">{stream.title}</h4>
               <div className="flex items-center gap-2 mb-2">
-                <img
-                  src={stream.avatar || `https://ui-avatars.com/api/?name=${stream.username}`}
-                  alt=""
-                  className="w-5 h-5 rounded-full"
-                />
+                <img src={avatarUrl} alt="" className="w-5 h-5 rounded-full" />
                 <span className="text-sm text-gray-600">@{stream.username}</span>
-                {stream.channel_verified && (
-                  <span className="text-blue-500">✓</span>
-                )}
               </div>
-              {stream.description && (
-                <p className="text-sm text-gray-500 line-clamp-2">{stream.description}</p>
-              )}
             </div>
             
             <div className="flex items-center gap-4">
@@ -622,16 +590,6 @@ function LiveStreamCard({ stream, viewMode }: { stream: LiveStream; viewMode: 'g
               </div>
             </div>
           </div>
-          
-          {stream.tags && stream.tags.length > 0 && (
-            <div className="flex gap-1 mt-2">
-              {stream.tags.slice(0, 3).map((tag, i) => (
-                <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
       </Link>
     );
@@ -639,30 +597,21 @@ function LiveStreamCard({ stream, viewMode }: { stream: LiveStream; viewMode: 'g
 
   return (
     <Link to={`/live/${stream.id}`} className="block group">
-      <div className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
-        {/* Thumbnail */}
+      <div className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden h-full flex flex-col">
         <div className="relative">
-          {stream.thumbnail_url ? (
-            <img
-              src={stream.thumbnail_url}
-              alt={stream.title}
-              className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
-            />
+          {thumbnailUrl ? (
+            <img src={thumbnailUrl} alt={stream.title} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-40 bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
               <Video className="w-12 h-12 text-white/50" />
             </div>
           )}
-
-          {/* Badge LIVE */}
           <div className="absolute top-2 left-2">
             <span className="bg-red-600 text-white text-xs font-bold px-2 py-1 rounded flex items-center">
               <span className="w-2 h-2 bg-white rounded-full animate-pulse mr-1"></span>
               LIVE
             </span>
           </div>
-
-          {/* Badge Premium */}
           {stream.is_premium && (
             <div className="absolute top-2 right-2">
               <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
@@ -671,66 +620,29 @@ function LiveStreamCard({ stream, viewMode }: { stream: LiveStream; viewMode: 'g
               </span>
             </div>
           )}
-
-          {/* Nombre de spectateurs */}
           <div className="absolute bottom-2 left-2">
             <span className="bg-black/60 text-white text-xs px-2 py-1 rounded flex items-center">
               <Users className="w-3 h-3 mr-1" />
-              {stream.current_viewers || 0}
+              {stream.current_viewers || stream.viewer_count || 0}
             </span>
           </div>
-
-          {/* Overlay au survol */}
           <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition flex items-center justify-center opacity-0 group-hover:opacity-100">
             <Play className="w-12 h-12 text-white" />
           </div>
         </div>
-
-        {/* Contenu */}
-        <div className="p-3">
-          <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1 group-hover:text-red-600 transition">
-            {stream.title}
-          </h4>
-
+        <div className="p-3 flex-1">
+          <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1 group-hover:text-red-600 transition">{stream.title}</h4>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <img
-                src={stream.avatar || `https://ui-avatars.com/api/?name=${stream.username}`}
-                alt=""
-                className="w-5 h-5 rounded-full"
-              />
-              <span className="text-sm text-gray-600 truncate">
-                {stream.channel_name || stream.username}
-                {stream.channel_verified && (
-                  <span className="text-blue-500 ml-1">✓</span>
-                )}
-              </span>
+              <img src={avatarUrl} alt="" className="w-5 h-5 rounded-full" />
+              <span className="text-sm text-gray-600 truncate">@{stream.username}</span>
             </div>
-
             <div className="flex items-center text-gray-500 text-sm">
               <Heart className="w-3 h-3 mr-1" />
               <span>{stream.like_count || 0}</span>
             </div>
           </div>
-
-          {stream.is_premium && (
-            <p className="text-xs text-yellow-600 mt-1">
-              {stream.price}€
-            </p>
-          )}
-
-          {stream.tags && stream.tags.length > 0 && (
-            <div className="flex gap-1 mt-2 flex-wrap">
-              {stream.tags.slice(0, 2).map((tag, i) => (
-                <span key={i} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                  #{tag}
-                </span>
-              ))}
-              {stream.tags.length > 2 && (
-                <span className="text-xs text-gray-400">+{stream.tags.length - 2}</span>
-              )}
-            </div>
-          )}
+          {stream.is_premium && <p className="text-xs text-yellow-600 mt-1">{stream.price}€</p>}
         </div>
       </div>
     </Link>
@@ -738,22 +650,17 @@ function LiveStreamCard({ stream, viewMode }: { stream: LiveStream; viewMode: 'g
 }
 
 // Composant pour les lives programmés
-function ScheduledStreamCard({ stream, viewMode }: { stream: LiveStream; viewMode: 'grid' | 'list' }) {
-  const timeUntil = formatDistance(new Date(stream.scheduled_for!), new Date(), { addSuffix: true, locale: fr });
+function ScheduledStreamCard({ stream, viewMode, formatTimeUntil }: { stream: LiveStream; viewMode: 'grid' | 'list'; formatTimeUntil: (date: string) => string }) {
+  const thumbnailUrl = stream.thumbnail_url || stream.thumbnail_path;
+  const avatarUrl = stream.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(stream.username || 'User')}&background=3b82f6&color=fff`;
+  const timeUntil = stream.scheduled_for ? formatTimeUntil(stream.scheduled_for) : 'Date non définie';
   
   if (viewMode === 'list') {
     return (
-      <Link
-        to={`/live/${stream.id}`}
-        className="bg-white rounded-lg shadow hover:shadow-md transition overflow-hidden flex"
-      >
+      <Link to={`/live/${stream.id}`} className="bg-white rounded-lg shadow hover:shadow-md transition overflow-hidden flex">
         <div className="relative w-64 h-36 flex-shrink-0">
-          {stream.thumbnail_url ? (
-            <img
-              src={stream.thumbnail_url}
-              alt={stream.title}
-              className="w-full h-full object-cover"
-            />
+          {thumbnailUrl ? (
+            <img src={thumbnailUrl} alt={stream.title} className="w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center">
               <Calendar className="w-8 h-8 text-white/50" />
@@ -766,34 +673,16 @@ function ScheduledStreamCard({ stream, viewMode }: { stream: LiveStream; viewMod
             </span>
           </div>
         </div>
-        
         <div className="flex-1 p-4">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1">
-                {stream.title}
-              </h4>
-              <div className="flex items-center gap-2 mb-2">
-                <img
-                  src={stream.avatar || `https://ui-avatars.com/api/?name=${stream.username}`}
-                  alt=""
-                  className="w-5 h-5 rounded-full"
-                />
-                <span className="text-sm text-gray-600">@{stream.username}</span>
-              </div>
-              <p className="text-sm text-blue-600 flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                Début {timeUntil}
-              </p>
-            </div>
-            
-            {stream.is_premium && (
-              <span className="flex items-center gap-1 text-yellow-600">
-                <Lock className="w-4 h-4" />
-                <span className="text-sm">{stream.price}€</span>
-              </span>
-            )}
+          <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1">{stream.title}</h4>
+          <div className="flex items-center gap-2 mb-2">
+            <img src={avatarUrl} alt="" className="w-5 h-5 rounded-full" />
+            <span className="text-sm text-gray-600">@{stream.username}</span>
           </div>
+          <p className="text-sm text-blue-600 flex items-center gap-1">
+            <Clock className="w-4 h-4" />
+            Début {timeUntil}
+          </p>
         </div>
       </Link>
     );
@@ -801,27 +690,21 @@ function ScheduledStreamCard({ stream, viewMode }: { stream: LiveStream; viewMod
 
   return (
     <Link to={`/live/${stream.id}`} className="block group">
-      <div className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden">
+      <div className="bg-white rounded-lg shadow hover:shadow-lg transition overflow-hidden h-full flex flex-col">
         <div className="relative">
-          {stream.thumbnail_url ? (
-            <img
-              src={stream.thumbnail_url}
-              alt={stream.title}
-              className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
-            />
+          {thumbnailUrl ? (
+            <img src={thumbnailUrl} alt={stream.title} className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
           ) : (
             <div className="w-full h-40 bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center">
               <Calendar className="w-12 h-12 text-white/50" />
             </div>
           )}
-
           <div className="absolute top-2 left-2">
             <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded flex items-center">
               <Clock className="w-3 h-3 mr-1" />
               Programmé
             </span>
           </div>
-
           {stream.is_premium && (
             <div className="absolute top-2 right-2">
               <span className="bg-yellow-500 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
@@ -831,38 +714,19 @@ function ScheduledStreamCard({ stream, viewMode }: { stream: LiveStream; viewMod
             </div>
           )}
         </div>
-
-        <div className="p-3">
-          <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1 group-hover:text-blue-600 transition">
-            {stream.title}
-          </h4>
-
+        <div className="p-3 flex-1">
+          <h4 className="font-semibold text-gray-900 mb-1 line-clamp-1 group-hover:text-blue-600 transition">{stream.title}</h4>
           <div className="flex items-center gap-2 mb-1">
-            <img
-              src={stream.avatar || `https://ui-avatars.com/api/?name=${stream.username}`}
-              alt=""
-              className="w-5 h-5 rounded-full"
-            />
-            <span className="text-sm text-gray-600 truncate">{stream.username}</span>
+            <img src={avatarUrl} alt="" className="w-5 h-5 rounded-full" />
+            <span className="text-sm text-gray-600 truncate">@{stream.username}</span>
           </div>
-
           <p className="text-xs text-blue-600 flex items-center gap-1">
             <Clock className="w-3 h-3" />
             Début {timeUntil}
           </p>
-
-          {stream.is_premium && (
-            <p className="text-xs text-yellow-600 mt-1">{stream.price}€</p>
-          )}
+          {stream.is_premium && <p className="text-xs text-yellow-600 mt-1">{stream.price}€</p>}
         </div>
       </div>
     </Link>
   );
 }
-
-// Icône CheckCircle manquante
-const CheckCircle = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-  </svg>
-);
