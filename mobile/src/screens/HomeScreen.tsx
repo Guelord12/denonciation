@@ -35,7 +35,7 @@ export default function HomeScreen() {
             <View style={[styles.logoIconContainer, { backgroundColor: '#EF4444', width: 48, height: 48, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }]}>
               <Text style={{ fontSize: 28, fontWeight: 'bold', color: 'white' }}>D</Text>
             </View>
-            <Text style={styles.headerTitle}>Dénonciation</Text>
+            <Text style={styles.headerTitle}>Denonce</Text>
           </View>
           <TouchableOpacity onPress={() => navigation.navigate('Notifications' as never)}>
             <Bell color={theme.colors.text} size={24} />
@@ -47,7 +47,7 @@ export default function HomeScreen() {
           <View style={[styles.logoIconContainer, { backgroundColor: theme.colors.primary + '20', width: 64, height: 64, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }]}>
             <Text style={{ fontSize: 40, fontWeight: 'bold', color: theme.colors.primary }}>D</Text>
           </View>
-          <Text style={styles.heroTitle}>Dénonciation</Text>
+          <Text style={styles.heroTitle}>Denonce</Text>
           <Text style={styles.heroSubtitle}>
             Signalez les abus, protégez les victimes
           </Text>

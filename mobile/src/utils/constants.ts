@@ -5,7 +5,7 @@ const DEV_SERVER_IP = '192.168.131.90';
 const PROD_SERVER_IP = '16.171.39.76';
 const SERVER_PORT = '5000';
 
-export const APP_NAME = 'Dénonciation';
+export const APP_NAME = 'Denonce';
 export const APP_VERSION = '1.0.0';
 
 export const API_URL = __DEV__

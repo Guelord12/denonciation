@@ -111,9 +111,9 @@ export default function LiveStreamScreen() {
   const chatListRef = useRef<FlatList>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
-  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const streamIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connectionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const streamIntervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // États du stream
   const [stream, setStream] = useState<StreamData | null>(null);
@@ -650,8 +650,9 @@ export default function LiveStreamScreen() {
 
   const handleShare = async () => {
     try {
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(undefined, { dialogTitle: 'Partager le stream' });
+      if (stream && await Sharing.isAvailableAsync()) {
+        const shareUrl = `denonce://live/${stream.id}`;
+        await Sharing.shareAsync(shareUrl, { dialogTitle: 'Partager le stream' });
       }
     } catch (error) {
       console.error('Share error:', error);

@@ -70,7 +70,7 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Shield color="#EF4444" size={48} />
-          <Text style={styles.title}>Dénonciation</Text>
+          <Text style={styles.title}>Denonce</Text>
           <Text style={styles.subtitle}>Connectez-vous à votre compte</Text>
         </View>
 
