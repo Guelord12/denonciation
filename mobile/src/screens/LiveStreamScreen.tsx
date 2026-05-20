@@ -158,32 +158,30 @@ export default function LiveStreamScreen() {
   const { data: streamData, refetch } = useQuery({
     queryKey: ['stream', streamId],
     queryFn: () => api.get(`/live/${streamId}`).then(res => res.data),
-    onSuccess: (data: StreamData) => {
-      setStream(data);
-      setViewerCount(data.current_viewers || 0);
-      setLikeCount(data.like_count || 0);
-      setHasAccess(data.hasAccess !== false);
-      setMessages(data.messages || []);
-      setIsStreamer(user?.id ? Number(data.user_id) === Number(user.id) : false);
+  });
+
+  useEffect(() => {
+    if (streamData) {
+      setStream(streamData);
+      setViewerCount(streamData.current_viewers || 0);
+      setLikeCount(streamData.like_count || 0);
+      setHasAccess(streamData.hasAccess !== false);
+      setMessages(streamData.messages || []);
+      setIsStreamer(user?.id ? Number(streamData.user_id) === Number(user.id) : false);
       setIsLoading(false);
-      
-      if (data.hls_url) {
+
+      if (streamData.hls_url) {
         setStreamType('hls');
         console.log('📺 Stream type: HLS');
       } else {
         setStreamType('webrtc');
         console.log('📡 Stream type: WebRTC');
-        if (data.user_id !== user?.id) {
+        if (streamData.user_id !== user?.id) {
           initializeWebRTC();
         }
       }
-    },
-    onError: () => {
-      setIsLoading(false);
-      Alert.alert('Erreur', 'Impossible de charger le stream');
-      navigation.goBack();
-    },
-  });
+    }
+  }, [streamData, user?.id]);
 
   // Sync isStreamer avec user change (user peut charger async)
   useEffect(() => {
@@ -246,17 +244,17 @@ export default function LiveStreamScreen() {
       const pc = new RTCPeerConnection({
         iceServers: ICE_SERVERS,
       });
-      
-      pc.ontrack = (event) => {
+
+      pc.addEventListener('track', (event: any) => {
         console.log('🎥 Received remote track');
         if (event.streams && event.streams[0]) {
           setRemoteStream(event.streams[0]);
           setConnectionStatus('connected');
           setVideoStatus({ isLoaded: true, error: null });
         }
-      };
-      
-      pc.onconnectionstatechange = () => {
+      });
+
+      pc.addEventListener('connectionstatechange', () => {
         console.log('📊 WebRTC state:', pc.connectionState);
         switch (pc.connectionState) {
           case 'connected':
@@ -272,16 +270,16 @@ export default function LiveStreamScreen() {
             setConnectionStatus('connecting');
             break;
         }
-      };
-      
-      pc.onicecandidate = (event) => {
+      });
+
+      pc.addEventListener('icecandidate', (event: any) => {
         if (event.candidate && socket) {
           socket.emit('webrtc_ice_candidate', {
             targetId: broadcasterId,
             candidate: event.candidate,
           });
         }
-      };
+      });
       
       peerConnectionRef.current = pc;
       
@@ -375,7 +373,7 @@ export default function LiveStreamScreen() {
       });
       
       // Gérer les candidats ICE
-      pc.onicecandidate = (event) => {
+      pc.addEventListener('icecandidate', (event: any) => {
         if (event.candidate && socket) {
           socket.emit('webrtc_ice_candidate', {
             targetId: 'broadcaster',
@@ -383,12 +381,12 @@ export default function LiveStreamScreen() {
           });
           console.log('🧊 ICE candidate sent');
         }
-      };
-      
+      });
+
       // Gérer l'état de la connexion
-      pc.onconnectionstatechange = () => {
+      pc.addEventListener('connectionstatechange', () => {
         console.log('📊 Broadcaster PC state:', pc.connectionState);
-      };
+      });
       
       peerConnectionRef.current = pc;
       

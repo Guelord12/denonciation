@@ -62,7 +62,7 @@ export default function LiveStreamDetail() {
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [streamType, setStreamType] = useState<'hls' | 'webrtc' | 'unknown'>('unknown');
-  const [connectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
   // États du streamer
   const [isStreamer, setIsStreamer] = useState(false);
@@ -83,7 +83,7 @@ export default function LiveStreamDetail() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
-  let controlsTimeout: NodeJS.Timeout;
+  let controlsTimeout: ReturnType<typeof setTimeout>;
 
   // =====================================================
   // REQUÊTES
@@ -102,12 +102,10 @@ export default function LiveStreamDetail() {
       setHasAccess(data.hasAccess !== false);
       setMessages(data.messages || []);
 
-      // Détecter si l'utilisateur est le streamer
       const authData = JSON.parse(localStorage.getItem('auth-storage') || '{}');
       const currentUserId = user?.id || authData?.state?.user?.id;
       setIsStreamer(Number(data.user_id) === Number(currentUserId));
 
-      // Déterminer le type de flux
       if (data.hls_url) {
         setStreamType('hls');
       } else {
@@ -115,14 +113,8 @@ export default function LiveStreamDetail() {
       }
 
       setIsLoading(false);
-    },
-    onError: () => {
-      setIsLoading(false);
-      toast.error('Impossible de charger le stream');
-      navigate('/live');
-    },
-    refetchInterval: 30000,
-  });
+    }
+  }, [data, user?.id]);
 
   // Sync isStreamer avec user change (user peut charger async)
   useEffect(() => {
@@ -194,7 +186,7 @@ export default function LiveStreamDetail() {
       hls.loadSource(stream.hls_url);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => { if (isPlaying) video.play().catch(console.warn); setConnectionStatus('connected'); });
-      hls.on(Hls.Events.ERROR, (event, data) => {
+      hls.on(Hls.Events.ERROR, (_event: any, data: any) => {
         if (data.fatal) { setVideoError('Erreur de lecture du stream'); setConnectionStatus('disconnected'); }
       });
       hlsRef.current = hls;
