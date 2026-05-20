@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { useTheme } from 'react-native-paper';
 import { api } from '../services/api';
-import { Shield, Megaphone, Flag, Video, TrendingUp, Bell } from 'lucide-react-native';
+import { Megaphone, Flag, Video, TrendingUp, Bell } from 'lucide-react-native';
 import ReportCard from '../components/reports/ReportCard';
 import LiveCard from '../components/live/LiveCard';
 import ChatbotWidget from '../components/chatbot/ChatbotWidget'; // ✅ Import du chatbot
@@ -32,14 +32,8 @@ export default function HomeScreen() {
         {/* Header avec Mégaphone */}
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <View style={styles.logoIconContainer}>
-              <Shield color="#EF4444" size={32} />
-              <Megaphone 
-                color="#EF4444" 
-                size={18} 
-                style={styles.megaphoneIcon} 
-                strokeWidth={2.5}
-              />
+            <View style={[styles.logoIconContainer, { backgroundColor: '#EF4444', width: 48, height: 48, borderRadius: 8, justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ fontSize: 28, fontWeight: 'bold', color: 'white' }}>D</Text>
             </View>
             <Text style={styles.headerTitle}>Dénonciation</Text>
           </View>
@@ -50,7 +44,9 @@ export default function HomeScreen() {
 
         {/* Hero Section */}
         <View style={styles.hero}>
-          <Shield color={theme.colors.primary} size={48} />
+          <View style={[styles.logoIconContainer, { backgroundColor: theme.colors.primary + '20', width: 64, height: 64, borderRadius: 12, justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ fontSize: 40, fontWeight: 'bold', color: theme.colors.primary }}>D</Text>
+          </View>
           <Text style={styles.heroTitle}>Dénonciation</Text>
           <Text style={styles.heroSubtitle}>
             Signalez les abus, protégez les victimes

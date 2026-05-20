@@ -45,7 +45,9 @@ export default function Header() {
       <div className="container-custom">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2">
-            <Shield className="w-8 h-8 text-red-600" />
+            <div className="w-8 h-8 bg-red-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">
+              D
+            </div>
             <span className="text-xl font-bold text-gray-900">Dénonce</span>
           </Link>
 
