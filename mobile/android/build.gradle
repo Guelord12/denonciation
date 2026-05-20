@@ -18,14 +18,6 @@ allprojects {
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
   }
-  
-  // ✅ Force les versions compatibles d'AndroidX Core
-  configurations.all {
-    resolutionStrategy {
-      force 'androidx.core:core:1.15.0'
-      force 'androidx.core:core-ktx:1.15.0'
-    }
-  }
 }
 
 apply plugin: "expo-root-project"

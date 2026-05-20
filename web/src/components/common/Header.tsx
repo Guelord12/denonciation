@@ -46,7 +46,7 @@ export default function Header() {
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2">
             <Shield className="w-8 h-8 text-red-600" />
-            <span className="text-xl font-bold text-gray-900">Dénonciation</span>
+            <span className="text-xl font-bold text-gray-900">Dénonce</span>
           </Link>
 
           <nav className="hidden md:flex items-center space-x-6">

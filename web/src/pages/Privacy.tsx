@@ -13,7 +13,7 @@ export default function Privacy() {
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-4">1. Introduction</h2>
           <p>
-            La protection de vos données personnelles est une priorité pour Dénonciation.
+            La protection de vos données personnelles est une priorité pour Dénonce.
             Cette politique explique comment nous collectons, utilisons et protégeons vos
             informations personnelles lorsque vous utilisez notre plateforme.
           </p>

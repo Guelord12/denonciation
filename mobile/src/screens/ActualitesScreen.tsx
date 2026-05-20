@@ -48,9 +48,9 @@ export default function ActualitesScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
-  const { data: actualitesData, isLoading, refetch } = useQuery({
-    queryKey: ['actualites', page, selectedCategory],
-    queryFn: () => api.get('/actualites', { 
+  const { data: actualitesData, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ['actualites', selectedCategory],
+    queryFn: () => api.get('/actualites', {
       params: { page, limit: 10, category: selectedCategory || undefined }
     }),
   });
@@ -77,6 +77,7 @@ export default function ActualitesScreen() {
   const handleRefresh = async () => {
     setRefreshing(true);
     setImageErrors({});
+    setPage(1);
     await refetch();
     setRefreshing(false);
   };

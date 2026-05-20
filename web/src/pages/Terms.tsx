@@ -13,7 +13,7 @@ export default function Terms() {
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-4">1. Acceptation des conditions</h2>
           <p>
-            En accédant et en utilisant la plateforme Dénonciation, vous acceptez d'être lié
+            En accédant et en utilisant la plateforme Dénonce, vous acceptez d'être lié
             par les présentes conditions générales d'utilisation. Si vous n'acceptez pas ces
             conditions, veuillez ne pas utiliser notre service.
           </p>
@@ -22,7 +22,7 @@ export default function Terms() {
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-4">2. Description du service</h2>
           <p>
-            Dénonciation est une plateforme de signalement citoyen permettant aux utilisateurs
+            Dénonce est une plateforme de signalement citoyen permettant aux utilisateurs
             de signaler des abus, des injustices et des violations des droits humains.
             La plateforme permet également de suivre l'évolution des signalements et d'y
             apporter des témoignages.
@@ -41,7 +41,7 @@ export default function Terms() {
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-4">4. Contenu utilisateur</h2>
           <p>
-            En soumettant du contenu sur Dénonciation, vous déclarez et garantissez que :
+            En soumettant du contenu sur Dénonce, vous déclarez et garantissez que :
           </p>
           <ul className="list-disc pl-6 mt-2 space-y-1">
             <li>Le contenu est véridique et précis</li>
@@ -57,7 +57,7 @@ export default function Terms() {
           </h2>
           <p>
             Tous les signalements sont soumis à une modération avant publication.
-            Dénonciation se réserve le droit de refuser, modifier ou supprimer tout contenu
+            Dénonce se réserve le droit de refuser, modifier ou supprimer tout contenu
             qui ne respecterait pas les présentes conditions.
           </p>
         </section>
@@ -74,7 +74,7 @@ export default function Terms() {
         <section>
           <h2 className="text-xl font-bold text-gray-900 mb-4">7. Responsabilité</h2>
           <p>
-            Dénonciation agit en tant qu'hébergeur de contenu et ne peut être tenue responsable
+            Dénonce agit en tant qu'hébergeur de contenu et ne peut être tenue responsable
             des contenus publiés par les utilisateurs. Cependant, nous nous engageons à retirer
             rapidement tout contenu signalé comme illégal.
           </p>

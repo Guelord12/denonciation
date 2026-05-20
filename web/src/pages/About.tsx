@@ -1,14 +1,31 @@
-import { Shield, Users, Eye, Globe, Award, Heart } from 'lucide-react';
+import { Shield, Users, Eye, Globe, Award, Heart, LucideIcon } from 'lucide-react';
+
+interface TeamMember {
+  name: string;
+  role: string;
+}
+
+interface Stat {
+  icon: LucideIcon;
+  value: string;
+  label: string;
+}
+
+interface Value {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}
 
 export default function About() {
-  const stats = [
+  const stats: Stat[] = [
     { icon: Users, value: '10,000+', label: 'Utilisateurs' },
     { icon: Eye, value: '5,000+', label: 'Signalements' },
     { icon: Globe, value: '20+', label: 'Pays' },
     { icon: Award, value: '89%', label: 'Taux de résolution' },
   ];
 
-  const values = [
+  const values: Value[] = [
     {
       icon: Shield,
       title: 'Protection',
@@ -26,10 +43,11 @@ export default function About() {
     },
   ];
 
-  const team = [
-    { name: 'Guelord KAYAYA', role: 'Fondateur & CEO', image: null },
-    { name: 'Michel KALEMBA', role: 'Directeur des opérations', image: null },
-    { name: 'John Biselele', role: 'Responsable juridique', image: null },
+  const team: TeamMember[] = [
+    { name: 'Alice Dupont', role: 'Fondatrice' },
+    { name: 'Bob Martin', role: 'Développeur' },
+    { name: 'Carol Lee', role: 'Responsable Contenu' },
+    { name: 'David Chen', role: 'Responsable Modération' },
   ];
 
   return (
@@ -37,7 +55,7 @@ export default function About() {
       {/* Hero Section */}
       <section className="text-center py-12">
         <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-          À propos de <span className="text-red-600">Dénonciation</span>
+          À propos de <span className="text-red-600">Dénonce</span>
         </h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
           Une plateforme citoyenne dédiée à la lutte contre les abus et les injustices.
@@ -48,7 +66,7 @@ export default function About() {
       {/* Stats */}
       <section className="bg-white rounded-2xl shadow p-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {stats.map((stat, index) => (
+          {stats.map((stat: Stat, index: number) => (
             <div key={index} className="text-center">
               <stat.icon className="w-8 h-8 text-red-600 mx-auto mb-2" />
               <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
@@ -63,7 +81,7 @@ export default function About() {
         <div className="max-w-3xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-6">Notre Mission</h2>
           <p className="text-lg text-gray-700 leading-relaxed">
-            Dénonciation est née de la volonté de créer un espace sûr où chaque citoyen peut
+            Dénonce est née de la volonté de créer un espace sûr où chaque citoyen peut
             signaler des abus sans crainte de représailles. Nous croyons que la transparence
             et la solidarité sont essentielles pour construire une société plus juste.
           </p>
@@ -74,7 +92,7 @@ export default function About() {
       <section>
         <h2 className="text-3xl font-bold text-center mb-12">Nos Valeurs</h2>
         <div className="grid md:grid-cols-3 gap-8">
-          {values.map((value, index) => (
+          {values.map((value: Value, index: number) => (
             <div key={index} className="bg-white rounded-xl shadow p-6 text-center">
               <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <value.icon className="w-8 h-8 text-red-600" />
@@ -120,7 +138,7 @@ export default function About() {
       <section>
         <h2 className="text-3xl font-bold text-center mb-12">Notre Équipe</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {team.map((member, index) => (
+          {team.map((member: TeamMember, index: number) => (
             <div key={index} className="bg-white rounded-xl shadow p-6 text-center">
               <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
                 <span className="text-3xl font-bold text-gray-400">
@@ -138,10 +156,10 @@ export default function About() {
       <section className="text-center py-12">
         <h2 className="text-2xl font-bold mb-4">Vous avez des questions ?</h2>
         <p className="text-gray-600 mb-6">
-          Notre équipe est là pour vous aider
+          Contactez-nous pour plus d'informations
         </p>
         <a
-          href="denonciation.world@gmail.com"
+          href="mailto:denonce@example.com"
           className="btn-primary inline-flex items-center space-x-2"
         >
           <span>Nous contacter</span>

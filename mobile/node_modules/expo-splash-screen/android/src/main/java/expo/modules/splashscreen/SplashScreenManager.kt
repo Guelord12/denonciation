@@ -1,7 +1,9 @@
 package expo.modules.splashscreen
 
 import android.app.Activity
+import android.app.Application.ActivityLifecycleCallbacks
 import android.os.Build
+import android.os.Bundle
 import android.view.View
 import android.view.ViewTreeObserver.OnPreDrawListener
 import android.view.animation.AccelerateInterpolator
@@ -42,22 +44,22 @@ object SplashScreenManager {
         .setInterpolator(AccelerateInterpolator())
         .withEndAction {
           if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            splashScreenViewProvider.remove();
+            splashScreenViewProvider.remove()
           } else {
             // Avoid calling applyThemesSystemBarAppearance
-            (splashScreenView as SplashScreenView).remove();
+            (splashScreenView as SplashScreenView).remove()
           }
         }.start()
     }
   }
 
-  fun registerOnActivity(activity: Activity) {
-    splashScreen = activity.installSplashScreen()
+  fun registerOnActivity(mainActivity: Activity) {
+    splashScreen = mainActivity.installSplashScreen()
     ReactMarker.addListener(contentAppearedListener)
 
     // Using `splashScreen.setKeepOnScreenCondition()` does not work on apis below 33
     // so we need to implement this ourselves.
-    val contentView = activity.findViewById<View>(android.R.id.content)
+    val contentView = mainActivity.findViewById<View>(android.R.id.content)
     val observer = contentView.viewTreeObserver
     observer.addOnPreDrawListener(object : OnPreDrawListener {
       override fun onPreDraw(): Boolean {
@@ -70,6 +72,29 @@ object SplashScreenManager {
     })
 
     configureSplashScreen()
+
+    // Mitigate race where splash exit listener may fire after activity stop,
+    // causing SurfaceControl.checkNotReleased() crash on API 31-33
+    // https://issuetracker.google.com/issues/242118185
+    if (Build.VERSION.SDK_INT in Build.VERSION_CODES.S..Build.VERSION_CODES.TIRAMISU) {
+      val application = mainActivity.application
+
+      application.registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
+        override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {}
+        override fun onActivityDestroyed(activity: Activity) {}
+        override fun onActivityPaused(activity: Activity) {}
+        override fun onActivityResumed(activity: Activity) {}
+        override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) {}
+        override fun onActivityStarted(activity: Activity) {}
+
+        override fun onActivityStopped(activity: Activity) {
+          if (activity == mainActivity) {
+            runCatching { mainActivity.splashScreen.clearOnExitAnimationListener() }
+            application.unregisterActivityLifecycleCallbacks(this)
+          }
+        }
+      })
+    }
   }
 
   fun hide() {

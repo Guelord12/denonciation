@@ -146,8 +146,12 @@ export default function SettingsScreen() {
   };
 
   const handlePrivacy = () => {
-    // Naviguer vers la page de confidentialité ou ouvrir un lien
+    // Créer une alerte informative plutôt que de naviguer
     Alert.alert('Confidentialité', 'Consultez notre politique de confidentialité sur notre site web.');
+  };
+
+  const handleAbout = () => {
+    navigation.navigate('About' as never);
   };
 
   const getLanguageName = (code: string) => {
@@ -262,7 +266,7 @@ export default function SettingsScreen() {
             <ChevronRight color="#CCC" size={20} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.menuItem, styles.menuItemLast]}>
+          <TouchableOpacity style={[styles.menuItem, styles.menuItemLast]} onPress={handleAbout}>
             <View style={styles.menuItemLeft}>
               <Info color={darkMode ? '#FFF' : '#666'} size={20} />
               <Text style={[styles.menuItemLabel, darkMode && styles.textDark]}>À propos</Text>

@@ -5,7 +5,6 @@ import { redisClient } from '../config/redis';
 import { logger } from '../utils/logger';
 import { io } from '../index';
 import crypto from 'crypto';
-import { moderateReport } from '../services/aiModeration.service';
 
 // =====================================================
 // TYPES ET INTERFACES
@@ -82,7 +81,6 @@ export async function createLiveStream(req: AuthRequest, res: Response): Promise
 
     logger.info(`📝 Creating stream for user ${userId}: ${title}`);
 
-    // ✅ AMÉLIORATION : Validation renforcée
     if (!title || title.trim().length < 3) { 
       res.status(400).json({ error: 'Le titre doit contenir au moins 3 caractères' }); 
       return; 
@@ -96,7 +94,6 @@ export async function createLiveStream(req: AuthRequest, res: Response): Promise
       return; 
     }
 
-    // ✅ AMÉLIORATION : Vérifier si l'utilisateur n'a pas déjà un stream actif
     const existingStream = await query(
       `SELECT id FROM live_streams WHERE user_id = $1 AND status IN ('active', 'paused')`,
       [userId]
@@ -194,7 +191,6 @@ export async function getLiveStreams(req: Request, res: Response): Promise<void>
 
     const whereClause = whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
     
-    // ✅ AMÉLIORATION : Tri configurable
     let orderByClause = '';
     if (sort === 'recent') {
       orderByClause = 'ls.start_time DESC';
@@ -222,6 +218,59 @@ export async function getLiveStreams(req: Request, res: Response): Promise<void>
     res.json({ streams: streams.rows, pagination: { page: pageNum, limit: limitNum, total, pages: Math.ceil(total / limitNum), has_more: offset + limitNum < total } });
   } catch (error) {
     logger.error('❌ Get live streams error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
+// CONTRÔLEUR : FEED VERTICAL (SWIPE)
+// =====================================================
+
+export async function getLiveFeed(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { page = '1', limit = '10', category } = req.query;
+    const pageNum = Math.max(1, Number(page));
+    const limitNum = Math.min(50, Math.max(1, Number(limit)));
+    const offset = (pageNum - 1) * limitNum;
+    const userId = req.user?.id;
+
+    let whereClause = `WHERE ls.status = 'active'`;
+    const params: any[] = [];
+    let paramCounter = 1;
+
+    if (category) {
+      whereClause += ` AND ls.category = $${paramCounter++}`;
+      params.push(category);
+    }
+
+    if (userId) {
+      whereClause += ` AND (ls.is_premium = false OR ls.user_id = $${paramCounter} OR EXISTS (SELECT 1 FROM subscriptions WHERE live_stream_id = ls.id AND user_id = $${paramCounter} AND payment_status = 'completed'))`;
+      params.push(userId);
+      paramCounter++;
+    } else {
+      whereClause += ` AND ls.is_premium = false`;
+    }
+
+    const streams = await query(
+      `SELECT ls.*, 
+              u.username, u.avatar, u.first_name, u.last_name,
+              (SELECT COUNT(*) FROM live_viewers WHERE stream_id = ls.id AND last_seen_at > NOW() - INTERVAL '1 minute') as current_viewers,
+              (SELECT COUNT(*) FROM stream_likes WHERE stream_id = ls.id) as current_likes
+       FROM live_streams ls 
+       LEFT JOIN users u ON ls.user_id = u.id 
+       ${whereClause} 
+       ORDER BY RANDOM()
+       LIMIT $${paramCounter++} OFFSET $${paramCounter++}`,
+      [...params, limitNum, offset]
+    );
+
+    res.json({
+      streams: streams.rows,
+      has_more: streams.rows.length === limitNum,
+      page: pageNum
+    });
+  } catch (error) {
+    logger.error('❌ Get live feed error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
 }
@@ -367,6 +416,48 @@ export async function endLiveStream(req: AuthRequest, res: Response): Promise<vo
 }
 
 // =====================================================
+// CONTRÔLEUR : DÉMARRER LA DIFFUSION
+// =====================================================
+
+export async function startBroadcast(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const id = getParamId(req.params);
+    const userId = req.user!.id;
+
+    const streamResult = await query('SELECT * FROM live_streams WHERE id = $1 AND user_id = $2', [id, userId]);
+    if (streamResult.rows.length === 0) { res.status(404).json({ error: 'Stream non trouvé ou non autorisé' }); return; }
+
+    await query(`UPDATE live_streams SET status = 'active', start_time = NOW(), updated_at = NOW() WHERE id = $1`, [id]);
+
+    const updatedStream = await query(`SELECT ls.*, u.username, u.avatar FROM live_streams ls LEFT JOIN users u ON ls.user_id = u.id WHERE ls.id = $1`, [id]);
+    io.emit('stream_started', updatedStream.rows[0]);
+    res.json(updatedStream.rows[0]);
+  } catch (error) {
+    logger.error('❌ Start broadcast error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
+// CONTRÔLEUR : ARRÊTER LA DIFFUSION
+// =====================================================
+
+export async function stopBroadcast(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const id = getParamId(req.params);
+    const userId = req.user!.id;
+
+    await query(`UPDATE live_streams SET status = 'ended', end_time = NOW() WHERE id = $1 AND user_id = $2`, [id, userId]);
+    io.to(`stream:${id}`).emit('stream_ended', { streamId: id });
+    io.emit('stream_ended_global', { streamId: id });
+    res.json({ message: 'Diffusion arrêtée' });
+  } catch (error) {
+    logger.error('❌ Stop broadcast error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
 // CONTRÔLEUR : S'ABONNER À UN STREAM
 // =====================================================
 
@@ -384,7 +475,6 @@ export async function subscribeToStream(req: AuthRequest, res: Response): Promis
     if (existingSub.rows.length > 0) { res.status(400).json({ error: 'Déjà abonné à ce stream' }); return; }
 
     const subResult = await query(`INSERT INTO subscriptions (user_id, live_stream_id, amount, payment_status, payment_method_id) VALUES ($1, $2, $3, 'completed', $4) RETURNING *`, [userId, id, stream.price, payment_method_id || null]);
-    
     await logActivity(userId, 'SUBSCRIBE_STREAM', 'live_stream', parseInt(id), req, { amount: stream.price });
     res.status(201).json(subResult.rows[0]);
   } catch (error) {
@@ -483,6 +573,83 @@ export async function sendSuperChat(req: AuthRequest, res: Response): Promise<vo
 }
 
 // =====================================================
+// CONTRÔLEUR : ENVOYER UN CADEAU
+// =====================================================
+
+export async function sendGift(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const id = getParamId(req.params);
+    const userId = req.user!.id;
+    const { gift_id, amount = 1, message } = req.body;
+
+    const giftResult = await query('SELECT * FROM gifts WHERE id = $1', [gift_id]);
+    if (giftResult.rows.length === 0) { res.status(404).json({ error: 'Cadeau non trouvé' }); return; }
+
+    const gift = giftResult.rows[0];
+    const totalAmount = gift.price * amount;
+
+    const result = await query(
+      `INSERT INTO stream_gifts (stream_id, sender_id, gift_id, amount, total_price, message, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW()) RETURNING *`,
+      [id, userId, gift_id, amount, totalAmount, message || null]
+    );
+
+    const userResult = await query('SELECT username, avatar FROM users WHERE id = $1', [userId]);
+    const enrichedGift = { ...result.rows[0], gift_name: gift.name, gift_icon: gift.icon, username: userResult.rows[0]?.username || 'Anonymous', avatar: userResult.rows[0]?.avatar };
+
+    io.to(`stream:${id}`).emit('new_gift', enrichedGift);
+    res.status(201).json(enrichedGift);
+  } catch (error) {
+    logger.error('❌ Send gift error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
+// CONTRÔLEUR : LISTE DES CADEAUX
+// =====================================================
+
+export async function getGiftList(req: Request, res: Response): Promise<void> {
+  try {
+    const gifts = await query('SELECT * FROM gifts WHERE is_active = true ORDER BY price ASC');
+    res.json({ gifts: gifts.rows });
+  } catch (error) {
+    logger.error('❌ Get gift list error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
+// CONTRÔLEUR : CLASSEMENT DES SUPPORTERS
+// =====================================================
+
+export async function getLeaderboard(req: Request, res: Response): Promise<void> {
+  try {
+    const id = getParamId(req.params);
+    const { limit = '10' } = req.query;
+
+    const leaderboard = await query(
+      `SELECT u.id, u.username, u.avatar,
+              COALESCE(SUM(sc.amount), 0) + COALESCE(SUM(sg.total_price), 0) as total_spent
+       FROM live_streams ls
+       LEFT JOIN super_chats sc ON ls.id = sc.stream_id
+       LEFT JOIN stream_gifts sg ON ls.id = sg.stream_id
+       LEFT JOIN users u ON (sc.user_id = u.id OR sg.sender_id = u.id)
+       WHERE ls.id = $1 AND u.id IS NOT NULL
+       GROUP BY u.id, u.username, u.avatar
+       ORDER BY total_spent DESC
+       LIMIT $2`,
+      [id, Number(limit)]
+    );
+
+    res.json({ leaderboard: leaderboard.rows });
+  } catch (error) {
+    logger.error('❌ Get leaderboard error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
 // CONTRÔLEUR : SIGNALER UN STREAM
 // =====================================================
 
@@ -553,16 +720,18 @@ export async function getStreamStats(req: Request, res: Response): Promise<void>
         COUNT(cm.id) as total_messages, 
         COUNT(sl.user_id) as total_likes, 
         COALESCE(SUM(sc.amount), 0) as total_super_chats,
+        COALESCE(SUM(sg.total_price), 0) as total_gifts,
         (SELECT COUNT(*) FROM live_viewers WHERE stream_id = $1 AND last_seen_at > NOW() - INTERVAL '1 minute') as current_viewers
        FROM live_streams ls 
        LEFT JOIN live_viewers lv ON ls.id = lv.stream_id 
        LEFT JOIN live_chat_messages cm ON ls.id = cm.live_stream_id 
        LEFT JOIN stream_likes sl ON ls.id = sl.stream_id 
        LEFT JOIN super_chats sc ON ls.id = sc.stream_id 
+       LEFT JOIN stream_gifts sg ON ls.id = sg.stream_id 
        WHERE ls.id = $1 GROUP BY ls.id`, [id]
     );
 
-    res.json(stats.rows[0] || { unique_viewers: 0, unique_chatters: 0, total_messages: 0, total_likes: 0, total_super_chats: 0, current_viewers: 0 });
+    res.json(stats.rows[0] || {});
   } catch (error) {
     logger.error('❌ Get stream stats error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
@@ -607,6 +776,89 @@ export async function getStreamViewers(req: Request, res: Response): Promise<voi
 }
 
 // =====================================================
+// CONTRÔLEUR : REJOINDRE UN STREAM
+// =====================================================
+
+export async function joinStreamAsViewer(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const id = getParamId(req.params);
+    const userId = req.user!.id;
+
+    await query(
+      `INSERT INTO live_viewers (stream_id, user_id, joined_at, last_seen_at)
+       VALUES ($1, $2, NOW(), NOW())
+       ON CONFLICT (stream_id, user_id) DO UPDATE SET last_seen_at = NOW()`,
+      [id, userId]
+    );
+
+    const count = await query('SELECT COUNT(*) as count FROM live_viewers WHERE stream_id = $1 AND last_seen_at > NOW() - INTERVAL \'1 minute\'', [id]);
+    const viewerCount = parseInt(count.rows[0].count);
+    io.to(`stream:${id}`).emit('viewer_count_update', { streamId: id, count: viewerCount });
+
+    res.json({ success: true, viewer_count: viewerCount });
+  } catch (error) {
+    logger.error('❌ Join stream error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
+// CONTRÔLEUR : QUITTER UN STREAM
+// =====================================================
+
+export async function leaveStream(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const id = getParamId(req.params);
+    const userId = req.user!.id;
+
+    await query('DELETE FROM live_viewers WHERE stream_id = $1 AND user_id = $2', [id, userId]);
+
+    const count = await query('SELECT COUNT(*) as count FROM live_viewers WHERE stream_id = $1 AND last_seen_at > NOW() - INTERVAL \'1 minute\'', [id]);
+    const viewerCount = parseInt(count.rows[0].count);
+    io.to(`stream:${id}`).emit('viewer_count_update', { streamId: id, count: viewerCount });
+
+    res.json({ success: true, viewer_count: viewerCount });
+  } catch (error) {
+    logger.error('❌ Leave stream error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
+// CONTRÔLEUR : MES STREAMS
+// =====================================================
+
+export async function getMyStreams(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    const streams = await query(`SELECT * FROM live_streams WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50`, [userId]);
+    res.json({ streams: streams.rows });
+  } catch (error) {
+    logger.error('❌ Get my streams error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
+// CONTRÔLEUR : SUPPRIMER UN STREAM
+// =====================================================
+
+export async function deleteStream(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const id = getParamId(req.params);
+    const userId = req.user!.id;
+
+    const result = await query('DELETE FROM live_streams WHERE id = $1 AND user_id = $2 RETURNING *', [id, userId]);
+    if (result.rows.length === 0) { res.status(404).json({ error: 'Stream non trouvé ou non autorisé' }); return; }
+
+    res.json({ message: 'Stream supprimé avec succès' });
+  } catch (error) {
+    logger.error('❌ Delete stream error:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+}
+
+// =====================================================
 // EXPORT PAR DÉFAUT
 // =====================================================
 
@@ -625,4 +877,14 @@ export default {
   getStreamStats,
   createClip,
   getStreamViewers,
+  getLiveFeed,
+  sendGift,
+  getGiftList,
+  getLeaderboard,
+  startBroadcast,
+  stopBroadcast,
+  joinStreamAsViewer,
+  leaveStream,
+  getMyStreams,
+  deleteStream,
 };

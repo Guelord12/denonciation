@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -29,6 +30,7 @@ import CreateReport from './pages/CreateReport';
 import ReportDetail from './pages/ReportDetail';
 import LiveStreams from './pages/LiveStreams';
 import LiveStreamDetail from './pages/LiveStreamDetail';
+import LiveFeed from './pages/LiveFeed';
 import CreateLive from './pages/CreateLive';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
@@ -42,8 +44,8 @@ import AdminReports from './pages/admin/Reports';
 import AdminModeration from './pages/admin/Moderation';
 import AdminAnalytics from './pages/admin/Analytics';
 import AdminSettings from './pages/admin/Settings';
+import AdminLogs from './pages/admin/Logs';
 
-// ✅ Configuration de React Query avec retries réduits
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -63,11 +65,11 @@ function PrivateRoute({ children, adminOnly = false }: { children: React.ReactNo
   const { isAuthenticated, user } = useAuthStore();
   
   if (!isAuthenticated) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
   
   if (adminOnly && !user?.is_admin) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
   
   return <>{children}</>;
@@ -77,13 +79,19 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore();
   
   if (isAuthenticated) {
-    return <Navigate to="/dashboard" />;
+    return <Navigate to="/dashboard" replace />;
   }
   
   return <>{children}</>;
 }
 
 function App() {
+  const initialize = useAuthStore((state) => state.initialize);
+
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter
@@ -100,6 +108,7 @@ function App() {
             <Route path="/reports/:id" element={<ReportDetail />} />
             <Route path="/live" element={<LiveStreams />} />
             <Route path="/live/:id" element={<LiveStreamDetail />} />
+            <Route path="/live/feed" element={<LiveFeed />} />
             <Route path="/about" element={<About />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/faq" element={<FAQ />} />
@@ -120,79 +129,56 @@ function App() {
           {/* User Routes */}
           <Route element={<MainLayout />}>
             <Route path="/dashboard" element={
-              <PrivateRoute>
-                <Dashboard />
-              </PrivateRoute>
+              <PrivateRoute><Dashboard /></PrivateRoute>
             } />
             <Route path="/reports/create" element={
-              <PrivateRoute>
-                <CreateReport />
-              </PrivateRoute>
+              <PrivateRoute><CreateReport /></PrivateRoute>
             } />
             <Route path="/live/create" element={
-              <PrivateRoute>
-                <CreateLive />
-              </PrivateRoute>
+              <PrivateRoute><CreateLive /></PrivateRoute>
             } />
             <Route path="/profile" element={
-              <PrivateRoute>
-                <Profile />
-              </PrivateRoute>
+              <PrivateRoute><Profile /></PrivateRoute>
             } />
             <Route path="/profile/:id" element={<Profile />} />
             <Route path="/settings" element={
-              <PrivateRoute>
-                <Settings />
-              </PrivateRoute>
+              <PrivateRoute><Settings /></PrivateRoute>
             } />
             <Route path="/notifications" element={
-              <PrivateRoute>
-                <Notifications />
-              </PrivateRoute>
+              <PrivateRoute><Notifications /></PrivateRoute>
             } />
             <Route path="/my-reports" element={
-              <PrivateRoute>
-                <MyReports />
-              </PrivateRoute>
+              <PrivateRoute><MyReports /></PrivateRoute>
             } />
           </Route>
 
           {/* Admin Routes */}
           <Route element={<AdminLayout />}>
             <Route path="/admin" element={
-              <PrivateRoute adminOnly>
-                <AdminDashboard />
-              </PrivateRoute>
+              <PrivateRoute adminOnly><AdminDashboard /></PrivateRoute>
             } />
             <Route path="/admin/users" element={
-              <PrivateRoute adminOnly>
-                <AdminUsers />
-              </PrivateRoute>
+              <PrivateRoute adminOnly><AdminUsers /></PrivateRoute>
             } />
             <Route path="/admin/reports" element={
-              <PrivateRoute adminOnly>
-                <AdminReports />
-              </PrivateRoute>
+              <PrivateRoute adminOnly><AdminReports /></PrivateRoute>
             } />
             <Route path="/admin/moderation" element={
-              <PrivateRoute adminOnly>
-                <AdminModeration />
-              </PrivateRoute>
+              <PrivateRoute adminOnly><AdminModeration /></PrivateRoute>
             } />
             <Route path="/admin/analytics" element={
-              <PrivateRoute adminOnly>
-                <AdminAnalytics />
-              </PrivateRoute>
+              <PrivateRoute adminOnly><AdminAnalytics /></PrivateRoute>
             } />
             <Route path="/admin/settings" element={
-              <PrivateRoute adminOnly>
-                <AdminSettings />
-              </PrivateRoute>
+              <PrivateRoute adminOnly><AdminSettings /></PrivateRoute>
+            } />
+            <Route path="/admin/logs" element={
+              <PrivateRoute adminOnly><AdminLogs /></PrivateRoute>
             } />
           </Route>
 
           {/* 404 */}
-          <Route path="*" element={<Navigate to="/" />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
       <Toaster position="top-right" />

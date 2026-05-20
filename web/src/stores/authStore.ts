@@ -30,6 +30,10 @@ interface AuthState {
   refreshAccessToken: () => Promise<string | null>;
   updateUser: (user: Partial<User>) => void;
   initialize: () => Promise<void>;
+  setTokens: (accessToken: string, refreshToken: string) => void;
+  setUser: (user: User) => void;
+  setAccessToken: (accessToken: string) => void;
+  clearAuth: () => void;
 }
 
 interface RegisterData {
@@ -146,6 +150,27 @@ export const useAuthStore = create<AuthState>()(
         }));
       },
 
+      setTokens: (accessToken: string, refreshToken: string) => {
+        set({ accessToken, refreshToken });
+      },
+
+      setUser: (user: User) => {
+        set({ user, isAuthenticated: true });
+      },
+
+      setAccessToken: (accessToken: string) => {
+        set({ accessToken });
+      },
+
+      clearAuth: () => {
+        set({
+          user: null,
+          accessToken: null,
+          refreshToken: null,
+          isAuthenticated: false,
+        });
+      },
+
       initialize: async () => {
         set({ isLoading: true });
         
@@ -183,6 +208,7 @@ export const useAuthStore = create<AuthState>()(
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
+        accessToken: state.accessToken,
         refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),

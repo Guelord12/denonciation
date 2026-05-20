@@ -1,17 +1,17 @@
-import React
-import UIKit
 import ExpoModulesCore
+internal import React
+import UIKit
 
-public class SplashScreenManager: NSObject, RCTReloadListener {
-  @objc public static let shared = SplashScreenManager()
+class SplashScreenManager: NSObject, RCTReloadListener {
+  @objc static let shared = SplashScreenManager()
   private var loadingView: UIView?
   private var rootView: UIView?
   private var options = SplashScreenOptions()
-  public var preventAutoHideCalled = false
+  var preventAutoHideCalled = false
 
   private override init() {}
 
-  public func initWith(_ rootView: UIView) {
+  func initWith(_ rootView: UIView) {
     if RCTRunningInAppExtension() {
       return
     }
@@ -57,7 +57,13 @@ public class SplashScreenManager: NSObject, RCTReloadListener {
   }
 
   private func showSplashScreen() {
-    if let vc = UIStoryboard(name: "SplashScreen", bundle: nil).instantiateInitialViewController() {
+    let splashScreenFilename = Bundle.main.object(forInfoDictionaryKey: "UILaunchStoryboardName") as? String ?? "SplashScreen"
+    // Prevents crashes in brownfield apps where the splash screen storyboard may not be present.
+    guard Bundle.main.path(forResource: splashScreenFilename, ofType: "storyboardc") != nil else {
+      return
+    }
+
+    if let vc = UIStoryboard(name: splashScreenFilename, bundle: nil).instantiateInitialViewController() {
       loadingView = vc.view
       loadingView?.autoresizingMask = [.flexibleWidth, .flexibleHeight]
 
@@ -66,20 +72,14 @@ public class SplashScreenManager: NSObject, RCTReloadListener {
         loadingView?.center = CGPoint(x: bounds.midX, y: bounds.midY)
       }
       loadingView?.isHidden = false
-#if RCT_NEW_ARCH_ENABLED
       if let hostView = rootView as? RCTSurfaceHostingProxyRootView, let loadingView {
         hostView.disableActivityIndicatorAutoHide(true)
         hostView.loadingView = loadingView
       }
-#else
-      if let loadingView {
-        self.rootView?.addSubview(loadingView)
-      }
-#endif
     }
   }
 
-  public func didReceiveReloadCommand() {
+  func didReceiveReloadCommand() {
     showSplashScreen()
   }
 

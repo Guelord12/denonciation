@@ -133,16 +133,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initialize: async () => {
     set({ isLoading: true });
-    
+
     try {
       const token = await AsyncStorage.getItem('accessToken');
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
       const userStr = await AsyncStorage.getItem('user');
-      
+
       if (token && userStr) {
         const user = JSON.parse(userStr);
         set({
           user,
           accessToken: token,
+          refreshToken: refreshToken || null,
           isAuthenticated: true,
         });
         console.log('✅ Auth initialized: user', user.username);

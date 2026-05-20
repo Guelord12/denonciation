@@ -1,19 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { reportAPI, liveAPI } from '../services/api';
+import { reportAPI } from '../services/api';
 import ReportCard from '../components/reports/ReportCard';
-import StreamCard from '../components/live/StreamCard';
 import { Flag, Video, Users, TrendingUp, ArrowRight } from 'lucide-react';
 
 export default function Home() {
   const { data: reportsData } = useQuery({
     queryKey: ['home-reports'],
     queryFn: () => reportAPI.getReports({ page: 1, limit: 6, status: 'approved' }).then(res => res.data),
-  });
-
-  const { data: streamsData } = useQuery({
-    queryKey: ['home-streams'],
-    queryFn: () => liveAPI.getStreams({ page: 1, limit: 4 }).then(res => res.data),
   });
 
   const stats = [
@@ -56,15 +50,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section>
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">En direct</h2>
-          <Link to="/live" className="text-red-600 hover:underline flex items-center">Voir tout <ArrowRight className="w-4 h-4 ml-1" /></Link>
-        </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {streamsData?.streams?.map((stream: any) => <StreamCard key={stream.id} stream={stream} />)}
-        </div>
-      </section>
+      {/* Section Live désactivée temporairement */}
 
       <section className="bg-gray-900 text-white rounded-3xl p-12 text-center">
         <h2 className="text-3xl font-bold mb-4">Vous avez été témoin d'un abus ?</h2>

@@ -12,7 +12,7 @@ export default function AdminHeader() {
       <div className="px-6 py-4 flex justify-between items-center">
         <div className="flex items-center space-x-4">
           <Link to="/" className="text-xl font-bold text-red-600">
-            Dénonciation Admin
+            Dénonce Admin
           </Link>
           <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded">
             Administration

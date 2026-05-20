@@ -1,5 +1,6 @@
 
 #import "RNCPagerViewManager.h"
+#import "RNCPagerViewShadowView.h"
 
 @implementation RNCPagerViewManager
 
@@ -8,12 +9,14 @@
 RCT_EXPORT_MODULE(RNCViewPager)
 
 RCT_EXPORT_VIEW_PROPERTY(initialPage, NSInteger)
-RCT_EXPORT_VIEW_PROPERTY(orientation, NSString)
+RCT_EXPORT_VIEW_PROPERTY(pageMargin, NSInteger)
 
+RCT_EXPORT_VIEW_PROPERTY(orientation, UIPageViewControllerNavigationOrientation)
 RCT_EXPORT_VIEW_PROPERTY(onPageSelected, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onPageScroll, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onPageScrollStateChanged, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(overdrag, BOOL)
+RCT_EXPORT_VIEW_PROPERTY(layoutDirection, NSString)
 
 
 - (void) goToPage
@@ -25,10 +28,10 @@ RCT_EXPORT_VIEW_PROPERTY(overdrag, BOOL)
                                         NSDictionary<NSNumber *, UIView *> *viewRegistry) {
         RNCPagerView *view = (RNCPagerView *)viewRegistry[reactTag];
         if (!view || ![view isKindOfClass:[RNCPagerView class]]) {
-            RCTLogError(@"Cannot find ReactNativePageView with tag #%@", reactTag);
+            RCTLogError(@"Cannot find RNCPagerView with tag #%@", reactTag);
             return;
         }
-        if (!animated || !view.animating) {
+        if (!animated || !view.transitioning) {
             [view goTo:index.integerValue animated:animated];
         }
     }];
@@ -42,7 +45,7 @@ RCT_EXPORT_VIEW_PROPERTY(overdrag, BOOL)
                                         NSDictionary<NSNumber *, UIView *> *viewRegistry) {
         RNCPagerView *view = (RNCPagerView *)viewRegistry[reactTag];
         if (!view || ![view isKindOfClass:[RNCPagerView class]]) {
-            RCTLogError(@"Cannot find ReactNativePageView with tag #%@", reactTag);
+            RCTLogError(@"Cannot find RNCPagerView with tag #%@", reactTag);
             return;
         }
         [view shouldScroll:enabled];
@@ -61,7 +64,7 @@ RCT_EXPORT_METHOD(setPageWithoutAnimation
     [self goToPage:reactTag index:index animated:false];
 }
 
-RCT_EXPORT_METHOD(setScrollEnabled
+RCT_EXPORT_METHOD(setScrollEnabledImperatively
                   : (nonnull NSNumber *)reactTag enabled
                   : (nonnull NSNumber *)enabled) {
     BOOL isEnabled = [enabled boolValue];
@@ -78,7 +81,12 @@ RCT_CUSTOM_VIEW_PROPERTY(keyboardDismissMode, NSString, RNCPagerView) {
 
 
 - (UIView *)view {
-    return [[RNCPagerView alloc] initWithEventDispatcher:self.bridge.eventDispatcher];
+    return [[RNCPagerView alloc] initWithBridge: self.bridge];
+}
+
+
+- (RCTShadowView *)shadowView {
+  return [RNCPagerViewShadowView new];
 }
 
 @end

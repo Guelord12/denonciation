@@ -11,12 +11,12 @@ const faqCategories = [
     category: 'Général',
     items: [
       {
-        question: 'Qu\'est-ce que Dénonciation ?',
-        answer: 'Dénonciation est une plateforme citoyenne qui permet de signaler des abus, des injustices et des violations des droits humains de manière sécurisée et anonyme si vous le souhaitez.',
+        question: 'Qu\'est-ce que Dénonce ?',
+        answer: 'Dénonce est une plateforme citoyenne qui permet de signaler des abus, des injustices et des violations des droits humains de manière sécurisée et anonyme si vous le souhaitez.',
       },
       {
         question: 'Est-ce gratuit ?',
-        answer: 'Oui, l\'utilisation de Dénonciation est entièrement gratuite pour tous les utilisateurs.',
+        answer: 'Oui, l\'utilisation de Dénonce est entièrement gratuite pour tous les utilisateurs.',
       },
       {
         question: 'Qui peut voir mes signalements ?',

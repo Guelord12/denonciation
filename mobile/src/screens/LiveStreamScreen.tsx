@@ -164,7 +164,7 @@ export default function LiveStreamScreen() {
       setLikeCount(data.like_count || 0);
       setHasAccess(data.hasAccess !== false);
       setMessages(data.messages || []);
-      setIsStreamer(data.user_id === user?.id);
+      setIsStreamer(user?.id ? Number(data.user_id) === Number(user.id) : false);
       setIsLoading(false);
       
       if (data.hls_url) {
@@ -185,8 +185,13 @@ export default function LiveStreamScreen() {
     },
   });
 
-  // =====================================================
-  // MUTATIONS
+  // Sync isStreamer avec user change (user peut charger async)
+  useEffect(() => {
+    if (stream && user?.id) {
+      setIsStreamer(Number(stream.user_id) === Number(user.id));
+    }
+  }, [stream?.user_id, user?.id]);
+
   // =====================================================
   const likeMutation = useMutation({
     mutationFn: () => api.post(`/live/${streamId}/like`),

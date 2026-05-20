@@ -19,7 +19,7 @@ export default function ChatbotWidget() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Bonjour ! Je suis l\'assistant Dénonciation. Comment puis-je vous aider ?',
+      text: 'Bonjour ! Je suis l\'assistant Dénonce. Comment puis-je vous aider ?',
       sender: 'bot',
       type: 'suggestion',
       suggestions: ['📝 Signaler un abus', '📊 Mes signalements', '📂 Catégories', '🆘 Aide'],
@@ -106,7 +106,7 @@ export default function ChatbotWidget() {
             <div className="flex items-center space-x-3">
               <Bot className="w-6 h-6" />
               <div>
-                <h3 className="font-semibold">Assistant Dénonciation</h3>
+                <h3 className="font-semibold">Assistant Dénonce</h3>
                 <p className="text-xs text-red-100">En ligne - Réponse rapide</p>
               </div>
             </div>

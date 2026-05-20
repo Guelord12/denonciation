@@ -12,7 +12,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center space-x-2 mb-4">
               <Shield className="w-8 h-8 text-red-500" />
-              <span className="text-xl font-bold">Dénonciation</span>
+              <span className="text-xl font-bold">Dénonce</span>
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
               Plateforme citoyenne de signalement d'abus et d'injustices.
@@ -140,7 +140,7 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 text-sm">
-          <p>&copy; {currentYear} Dénonciation. Tous droits réservés.</p>
+          <p>&copy; {currentYear} Dénonce. Tous droits réservés.</p>
           <p className="mt-2">
             Fait avec <span className="text-red-500">❤️</span> pour la justice
           </p>

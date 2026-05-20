@@ -1,4 +1,4 @@
-export const APP_NAME = 'Dénonciation';
+export const APP_NAME = 'Dénonce';
 export const APP_VERSION = '1.0.0';
 export const APP_DESCRIPTION = 'Plateforme de signalement d\'abus et d\'injustices';
 
@@ -11,7 +11,7 @@ export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ||
 
 // ✅ CORRECTION : Avatar par défaut utilisant UI Avatars (fonctionne toujours)
 export const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=EF4444&color=fff&size=128';
-export const DEFAULT_THUMBNAIL = 'https://via.placeholder.com/800x450/EF4444/FFFFFF?text=Dénonciation';
+export const DEFAULT_THUMBNAIL = 'https://via.placeholder.com/800x450/EF4444/FFFFFF?text=Dénonce';
 
 // ✅ Fonction utilitaire pour générer un avatar avec initiales
 export const getAvatarUrl = (name: string, size: number = 128): string => {

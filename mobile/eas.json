@@ -1,4 +1,4 @@
-{
+﻿{
   "cli": {
     "version": ">= 3.0.0",
     "appVersionSource": "local"
@@ -9,7 +9,8 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleDebug"
+        "gradleCommand": ":app:assembleDebug",
+        "resourceClass": "medium"
       },
       "ios": {
         "simulator": true,
@@ -26,8 +27,9 @@
       "android": {
         "buildType": "apk",
         "gradleCommand": ":app:assembleRelease",
+        "resourceClass": "medium",
         "cache": {
-          "disabled": true
+          "disabled": false
         }
       },
       "ios": {
@@ -44,7 +46,8 @@
       "distribution": "store",
       "android": {
         "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleRelease"
+        "gradleCommand": ":app:bundleRelease",
+        "resourceClass": "medium"
       },
       "ios": {
         "buildConfiguration": "Release"

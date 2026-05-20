@@ -144,6 +144,27 @@ export const liveAPI = {
     api.get(`/live/${id}/messages`, { params: { limit, before } }),
   sendSuperChat: (id: number, amount: number, message: string, color?: string) =>
     api.post(`/live/${id}/super-chat`, { amount, message, color }),
+  // ✅ NOUVELLES FONCTIONS
+  getLiveFeed: (params?: any) =>
+    api.get('/live/feed', { params }),
+  getGifts: () =>
+    api.get('/live/gifts'),
+  sendGift: (streamId: number, giftId: number, amount?: number, message?: string) =>
+    api.post(`/live/${streamId}/gift`, { gift_id: giftId, amount, message }),
+  getLeaderboard: (streamId: number, limit?: number) =>
+    api.get(`/live/${streamId}/leaderboard`, { params: { limit } }),
+  joinStream: (streamId: number) =>
+    api.post(`/live/${streamId}/join`),
+  leaveStream: (streamId: number) =>
+    api.post(`/live/${streamId}/leave`),
+  startBroadcast: (streamId: number) =>
+    api.post(`/live/${streamId}/start`),
+  stopBroadcast: (streamId: number) =>
+    api.post(`/live/${streamId}/stop`),
+  deleteStream: (streamId: number) =>
+    api.delete(`/live/${streamId}`),
+  getMyStreams: () =>
+    api.get('/live/my/streams'),
 };
 
 // Notification API
