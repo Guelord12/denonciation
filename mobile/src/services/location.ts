@@ -94,4 +94,5 @@ class LocationService {
   }
 }
 
+export { LocationService };
 export const locationService = new LocationService();

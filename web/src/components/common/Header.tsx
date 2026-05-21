@@ -23,8 +23,8 @@ import { fr } from 'date-fns/locale';
 export default function Header() {
   const navigate = useNavigate();
   const { user, logout, isAuthenticated } = useAuthStore();
-  const socket = useSocket();
-  const queryClient = useQueryClient();
+  const _socket = useSocket();
+  const _queryClient = useQueryClient();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);

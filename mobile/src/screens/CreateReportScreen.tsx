@@ -219,7 +219,7 @@ export default function CreateReportScreen() {
       const formData = new FormData();
       formData.append('title', title.trim());
       formData.append('description', description.trim());
-      formData.append('category_id', categoryId.toString());
+      formData.append('category_id', categoryId?.toString() || '');
       
       if (cityId) {
         formData.append('city_id', cityId.toString());
