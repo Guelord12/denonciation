@@ -20,7 +20,7 @@ import { Camera, MapPin, Video, X, ChevronDown, Upload, FileText, Lock, Globe, A
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
-import { LocationService } from '../services/location';
+import { LocationService, locationService } from '../services/location';
 import Toast from 'react-native-toast-message';
 
 interface Category {
@@ -161,7 +161,7 @@ export default function CreateReportScreen() {
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
     try {
-      const locationData = await LocationService.getDeviceLocation();
+      const locationData = await locationService.getDeviceLocation();
       if (locationData) {
         setLocation({
           coords: {
