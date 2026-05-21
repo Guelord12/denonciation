@@ -16,10 +16,11 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
-import { Camera, MapPin, Video, X, ChevronDown, Upload, FileText, Lock, Globe, AlertCircle, Shield, Eye, EyeOff, Send } from 'lucide-react-native';
+import { Camera, MapPin, Video, X, ChevronDown, Upload, FileText, Lock, Globe, AlertCircle, Shield, Eye, EyeOff, Send, Navigation } from 'lucide-react-native';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
+import { LocationService } from '../services/location';
 import Toast from 'react-native-toast-message';
 
 interface Category {
@@ -59,6 +60,9 @@ export default function CreateReportScreen() {
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cityName, setCityName] = useState('');
+  const [manualCityInput, setManualCityInput] = useState('');
+  const [showCityInput, setShowCityInput] = useState(false);
   
   // ✅ États pour la boîte de dialogue de visibilité
   const [showVisibilityModal, setShowVisibilityModal] = useState(false);
@@ -156,21 +160,24 @@ export default function CreateReportScreen() {
 
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
-    
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    
-    if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'Autorisez l\'accès à la localisation');
-      setIsGettingLocation(false);
-      return;
-    }
-
     try {
-      const loc = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
-      setLocation(loc);
-      Toast.show({ type: 'success', text1: 'Localisation obtenue' });
+      const locationData = await LocationService.getDeviceLocation();
+      if (locationData) {
+        setLocation({
+          coords: {
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+            accuracy: 0,
+            altitude: 0,
+            altitudeAccuracy: 0,
+            heading: 0,
+            speed: 0,
+          },
+          timestamp: Date.now(),
+        } as Location.LocationObject);
+        setCityName(`${locationData.city}, ${locationData.country}`);
+        Toast.show({ type: 'success', text1: `Localisation: ${locationData.city}` });
+      }
     } catch (error) {
       Alert.alert('Erreur', 'Impossible d\'obtenir votre position');
     } finally {
@@ -330,29 +337,66 @@ export default function CreateReportScreen() {
                 <ActivityIndicator size="small" color="#EF4444" />
               ) : (
                 <>
-                  <MapPin size={20} color="#EF4444" />
+                  <Navigation size={20} color="#EF4444" />
                   <Text style={styles.locationButtonText}>
-                    {location 
-                      ? `Position: ${location.coords.latitude.toFixed(4)}, ${location.coords.longitude.toFixed(4)}` 
+                    {location
+                      ? `Position: ${location.coords.latitude.toFixed(4)}, ${location.coords.longitude.toFixed(4)}`
                       : 'Utiliser ma position actuelle'}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
+            {location && (
+              <Text style={styles.locationDetected}>{cityName}</Text>
+            )}
           </View>
 
-          {/* Ville */}
+          {/* Ville avec option manuelle */}
           <View style={styles.field}>
             <Text style={styles.label}>Ville</Text>
-            <TouchableOpacity
-              style={styles.pickerButton}
-              onPress={() => setShowCityPicker(true)}
-            >
-              <Text style={[styles.pickerButtonText, !cityId && styles.placeholder]}>
-                {getCityName()}
-              </Text>
-              <ChevronDown size={20} color="#666" />
-            </TouchableOpacity>
+            {showCityInput ? (
+              <View>
+                <TextInput
+                  style={styles.input}
+                  value={manualCityInput}
+                  onChangeText={setManualCityInput}
+                  placeholder="Entrez une ville..."
+                  placeholderTextColor="#999"
+                />
+                <View style={styles.cityInputButtons}>
+                  <TouchableOpacity
+                    style={styles.cityInputCancel}
+                    onPress={() => { setShowCityInput(false); setManualCityInput(''); }}
+                  >
+                    <Text style={styles.cityInputCancelText}>Annuler</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.cityInputConfirm}
+                    onPress={() => { setCityName(manualCityInput); setShowCityInput(false); }}
+                  >
+                    <Text style={styles.cityInputConfirmText}>Valider</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => setShowCityPicker(true)}
+              >
+                <Text style={[styles.pickerButtonText, !cityName && styles.placeholder]}>
+                  {cityName || getCityName()}
+                </Text>
+                <ChevronDown size={20} color="#666" />
+              </TouchableOpacity>
+            )}
+            {cityName && (
+              <TouchableOpacity
+                style={styles.editCityButton}
+                onPress={() => { setShowCityInput(true); setManualCityInput(cityName); }}
+              >
+                <Text style={styles.editCityText}>Modifier la ville</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           {/* Médias */}
@@ -1160,5 +1204,50 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#EF4444',
+  },
+  locationDetected: {
+    fontSize: 12,
+    color: '#10B981',
+    marginTop: 6,
+    fontWeight: '500',
+  },
+  cityInputButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  cityInputCancel: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#DDD',
+    borderRadius: 6,
+  },
+  cityInputCancelText: {
+    color: '#666',
+    fontSize: 14,
+  },
+  cityInputConfirm: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    backgroundColor: '#EF4444',
+    borderRadius: 6,
+  },
+  cityInputConfirmText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  editCityButton: {
+    marginTop: 8,
+    paddingVertical: 8,
+    alignItems: 'center',
+  },
+  editCityText: {
+    fontSize: 13,
+    color: '#EF4444',
+    fontWeight: '500',
   },
 });

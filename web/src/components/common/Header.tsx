@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useSocket } from '../../hooks/useSocket';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { notificationAPI } from '../../services/api';
+import { COLORS } from '../../../../shared/colors';
 import {
   Bell,
   User,
@@ -45,26 +46,26 @@ export default function Header() {
       <div className="container-custom">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-red-600 text-white rounded-lg flex items-center justify-center font-bold text-lg">
+            <div className="w-8 h-8 text-white rounded-lg flex items-center justify-center font-bold text-lg" style={{ backgroundColor: COLORS.primary[500] }}>
               D
             </div>
-            <span className="text-xl font-bold text-gray-900">Dénonce</span>
+            <span className="text-xl font-bold text-gray-900">Denonce</span>
           </Link>
 
           <nav className="hidden md:flex items-center space-x-6">
-            <Link to="/" className="text-gray-700 hover:text-red-600 transition">
+            <Link to="/" className="text-gray-700 hover:text-gray-900 transition" style={{ '--hover-color': COLORS.primary[500] } as any}>
               Accueil
             </Link>
-            <Link to="/reports" className="text-gray-700 hover:text-red-600 transition">
+            <Link to="/reports" className="text-gray-700 hover:text-gray-900 transition">
               Signalements
             </Link>
-            <Link to="/live" className="text-gray-700 hover:text-red-600 transition">
+            <Link to="/live" className="text-gray-700 hover:text-gray-900 transition">
               Live
             </Link>
-            <Link to="/actualites" className="text-gray-700 hover:text-red-600 transition">
+            <Link to="/actualites" className="text-gray-700 hover:text-gray-900 transition">
               Actualités
             </Link>
-            <Link to="/information" className="text-gray-700 hover:text-red-600 transition">
+            <Link to="/information" className="text-gray-700 hover:text-gray-900 transition">
               Informations
             </Link>
           </nav>
@@ -74,7 +75,8 @@ export default function Header() {
               <>
                 <button
                   onClick={() => navigate('/reports/create')}
-                  className="hidden md:flex items-center space-x-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+                  className="hidden md:flex items-center space-x-1 text-white px-4 py-2 rounded-lg transition"
+                  style={{ backgroundColor: COLORS.primary[500] }}
                 >
                   <Plus className="w-4 h-4" />
                   <span>Signaler</span>
@@ -91,11 +93,12 @@ export default function Header() {
                 <div className="relative">
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
-                    className="relative p-2 text-gray-600 hover:text-red-600 transition"
+                    className="relative p-2 text-gray-600 transition"
+                    style={{ '--hover-color': COLORS.primary[500] } as any}
                   >
                     <Bell className="w-5 h-5" />
                     {unreadData?.unread_count > 0 && (
-                      <span className="absolute top-0 right-0 w-4 h-4 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
+                      <span className="absolute top-0 right-0 w-4 h-4 text-white text-xs rounded-full flex items-center justify-center" style={{ backgroundColor: COLORS.primary[500] }}>
                         {unreadData.unread_count > 9 ? '9+' : unreadData.unread_count}
                       </span>
                     )}
@@ -119,7 +122,7 @@ export default function Header() {
                     {user?.avatar ? (
                       <img src={user.avatar} alt={user.username} className="w-8 h-8 rounded-full object-cover" />
                     ) : (
-                      <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center text-white">
+                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-white" style={{ backgroundColor: COLORS.primary[500] }}>
                         {user?.username?.charAt(0).toUpperCase()}
                       </div>
                     )}
@@ -145,7 +148,7 @@ export default function Header() {
                           </Link>
                         )}
                         <hr className="my-1" />
-                        <button onClick={handleLogout} className="flex items-center w-full px-4 py-2 text-red-600 hover:bg-gray-100 transition">
+                        <button onClick={handleLogout} className="flex items-center w-full px-4 py-2 transition" style={{ color: COLORS.primary[500] }}>
                           <LogOut className="w-4 h-4 mr-2" /> Déconnexion
                         </button>
                       </div>

@@ -62,7 +62,7 @@ export default function LiveStreamDetail() {
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [streamType, setStreamType] = useState<'hls' | 'webrtc' | 'unknown'>('unknown');
-  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const [_connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
 
   // États du streamer
   const [isStreamer, setIsStreamer] = useState(false);

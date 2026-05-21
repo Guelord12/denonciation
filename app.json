@@ -1,0 +1,67 @@
+{
+  "expo": {
+    "name": "Denonce",
+    "slug": "denonce",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./mobile/assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./mobile/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletMode": true,
+      "bundleIdentifier": "com.denonce.app",
+      "buildNumber": "1.0.0"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./mobile/assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.denonce.app",
+      "versionCode": 1,
+      "permissions": [
+        "INTERNET",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./web/public/favicon.ico"
+    },
+    "scheme": "denonce",
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Denonce a besoin d'accès à votre caméra.",
+          "microphonePermission": "Denonce a besoin d'accès à votre microphone."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Denonce a besoin d'accès à votre localisation."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Denonce a besoin d'accès à vos photos.",
+          "savePhotosPermission": "Denonce a besoin de sauvegarder des photos.",
+          "videoPermission": "Denonce a besoin d'accès à vos vidéos."
+        }
+      ]
+    ]
+  }
+}

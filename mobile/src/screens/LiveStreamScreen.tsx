@@ -245,7 +245,7 @@ export default function LiveStreamScreen() {
         iceServers: ICE_SERVERS,
       });
 
-      pc.addEventListener('track', (event: any) => {
+      (pc as any).addEventListener('track', (event: any) => {
         console.log('🎥 Received remote track');
         if (event.streams && event.streams[0]) {
           setRemoteStream(event.streams[0]);
@@ -254,7 +254,7 @@ export default function LiveStreamScreen() {
         }
       });
 
-      pc.addEventListener('connectionstatechange', () => {
+      (pc as any).addEventListener('connectionstatechange', () => {
         console.log('📊 WebRTC state:', pc.connectionState);
         switch (pc.connectionState) {
           case 'connected':
@@ -272,7 +272,7 @@ export default function LiveStreamScreen() {
         }
       });
 
-      pc.addEventListener('icecandidate', (event: any) => {
+      (pc as any).addEventListener('icecandidate', (event: any) => {
         if (event.candidate && socket) {
           socket.emit('webrtc_ice_candidate', {
             targetId: broadcasterId,
@@ -373,7 +373,7 @@ export default function LiveStreamScreen() {
       });
       
       // Gérer les candidats ICE
-      pc.addEventListener('icecandidate', (event: any) => {
+      (pc as any).addEventListener('icecandidate', (event: any) => {
         if (event.candidate && socket) {
           socket.emit('webrtc_ice_candidate', {
             targetId: 'broadcaster',
@@ -384,7 +384,7 @@ export default function LiveStreamScreen() {
       });
 
       // Gérer l'état de la connexion
-      pc.addEventListener('connectionstatechange', () => {
+      (pc as any).addEventListener('connectionstatechange', () => {
         console.log('📊 Broadcaster PC state:', pc.connectionState);
       });
       
