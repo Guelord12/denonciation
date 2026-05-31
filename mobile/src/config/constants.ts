@@ -33,7 +33,7 @@ export const SOCKET_URL = serverConfig.socket;
 // AUTRES CONSTANTES
 // =====================================================
 
-export const APP_NAME = 'Denonce';
+export const APP_NAME = 'Dénonce';
 export const APP_VERSION = '1.0.0';
 
 export const DEFAULT_AVATAR = 'https://ui-avatars.com/api/?background=EF4444&color=fff&size=128';

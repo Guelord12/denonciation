@@ -10,7 +10,7 @@ cloudinary.config({
 
 export async function uploadToCloudinary(
   file: Express.Multer.File,
-  folder: string = 'denonciation'
+  folder: string = 'denonce'
 ): Promise<string> {
   try {
     const b64 = Buffer.from(file.buffer).toString('base64');

@@ -35,12 +35,13 @@ export default function CreateReport() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [categoryId, setCategoryId] = useState<number | null>(null);
   const [cityId, setCityId] = useState<number | null>(null);
-  const [media, setMedia] = useState<MediaFile[]>([]);
+  const [media, setMedia] = useState<MediaFile | null>(null);
   const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isLive, setIsLive] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
@@ -79,39 +80,56 @@ export default function CreateReport() {
   });
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-
-    const newMedia: MediaFile[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      if (media.length + newMedia.length >= 5) {
-        toast.error('Maximum 5 fichiers autorisés');
-        break;
-      }
-
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error(`${file.name} dépasse 10MB`);
-        continue;
-      }
-
-      newMedia.push({
-        file,
-        preview: URL.createObjectURL(file),
-        type: file.type.startsWith('video') ? 'video' : 'image',
-      });
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (media) {
+      toast.error('Vous ne pouvez ajouter qu\'un seul média');
+      e.target.value = '';
+      return;
     }
 
-    setMedia([...media, ...newMedia]);
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error(`${file.name} dépasse 50MB`);
+      e.target.value = '';
+      return;
+    }
+
+    setMedia({
+      file,
+      preview: URL.createObjectURL(file),
+      type: file.type.startsWith('video') ? 'video' : 'image',
+    });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const removeMedia = (index: number) => {
-    const newMedia = [...media];
-    URL.revokeObjectURL(newMedia[index].preview);
-    newMedia.splice(index, 1);
-    setMedia(newMedia);
+  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (media) {
+      toast.error('Vous ne pouvez ajouter qu\'un seul média');
+      e.target.value = '';
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error(`${file.name} dépasse 50MB`);
+      e.target.value = '';
+      return;
+    }
+
+    setMedia({
+      file,
+      preview: URL.createObjectURL(file),
+      type: file.type.startsWith('video') ? 'video' : 'image',
+    });
+    if (cameraInputRef.current) cameraInputRef.current.value = '';
+  };
+
+  const removeMedia = () => {
+    if (media) {
+      URL.revokeObjectURL(media.preview);
+    }
+    setMedia(null);
   };
 
   const getCurrentLocation = () => {
@@ -180,8 +198,8 @@ export default function CreateReport() {
       formData.append('is_anonymous', String(visibilityMode === 'anonymous'));
       formData.append('visibility_mode', visibilityMode);
 
-      for (const file of media) {
-        formData.append('media', file.file);
+      if (media) {
+        formData.append('media', media.file);
       }
 
       createReportMutation.mutate(formData);
@@ -361,15 +379,22 @@ export default function CreateReport() {
         {/* Médias */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Photos / Vidéos (max 5)
+            Photo ou vidéo de preuve
           </label>
-          <div className="flex gap-3 mb-3">
+          <div className="flex gap-3 mb-3 flex-wrap">
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*,video/*"
-              multiple
               onChange={handleFileSelect}
+              className="hidden"
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*,video/*"
+              capture="environment"
+              onChange={handleCameraCapture}
               className="hidden"
             />
             <button
@@ -378,34 +403,40 @@ export default function CreateReport() {
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               <Upload className="w-5 h-5 text-gray-500" />
-              <span className="text-sm">Ajouter des fichiers</span>
+              <span className="text-sm">Choisir depuis l'appareil</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              <Camera className="w-5 h-5 text-gray-500" />
+              <span className="text-sm">Utiliser la caméra</span>
             </button>
           </div>
 
-          {media.length > 0 && (
-            <div className="flex gap-3 flex-wrap">
-              {media.map((item, index) => (
-                <div key={index} className="relative">
-                  {item.type === 'image' ? (
-                    <img
-                      src={item.preview}
-                      alt=""
-                      className="w-24 h-24 object-cover rounded-lg"
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-gray-900 rounded-lg flex items-center justify-center">
-                      <Video className="w-8 h-8 text-white" />
-                    </div>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => removeMedia(index)}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
+          {media && (
+            <div className="relative">
+              {media.type === 'image' ? (
+                <img
+                  src={media.preview}
+                  alt="Preview"
+                  className="w-full max-h-96 object-cover rounded-lg"
+                />
+              ) : (
+                <video
+                  src={media.preview}
+                  controls
+                  className="w-full max-h-96 rounded-lg"
+                />
+              )}
+              <button
+                type="button"
+                onClick={removeMedia}
+                className="absolute top-3 right-3 bg-red-600 text-white rounded-full p-2 hover:bg-red-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           )}
         </div>

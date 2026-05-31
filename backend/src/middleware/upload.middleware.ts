@@ -57,7 +57,7 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilt
 };
 
 // Taille maximale des fichiers
-const maxSize = parseInt(process.env.MAX_FILE_SIZE || '10485760'); // 10MB par défaut
+const maxSize = parseInt(process.env.MAX_FILE_SIZE || String(50 * 1024 * 1024)); // 50MB par défaut
 
 // Export des configurations multer
 export const uploadMemory = multer({

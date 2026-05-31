@@ -190,7 +190,7 @@ const translations: Record<string, Record<string, string>> = {
 
 export function useTranslation() {
   const [language, setLanguage] = useState<string>(() => {
-    return localStorage.getItem('language') || 'fr';
+    return localStorage.getItem('language') || localStorage.getItem('setting_language') || 'fr';
   });
 
   useEffect(() => {

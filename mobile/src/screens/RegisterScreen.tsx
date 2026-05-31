@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useAuthStore } from '../stores/authStore';
-import { Shield, Eye, EyeOff, User, Mail, Lock, Phone, MapPin, Calendar, Users, X } from 'lucide-react-native';
+import { Eye, EyeOff, User, Mail, Lock, Phone, MapPin, Calendar, Users, X } from 'lucide-react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Picker } from '@react-native-picker/picker';
 
@@ -125,7 +125,9 @@ export default function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Shield color="#EF4444" size={48} />
+          <View style={styles.logoCircle}>
+            <Text style={styles.logoLetter}>D</Text>
+          </View>
           <Text style={styles.title}>Inscription</Text>
           <Text style={styles.subtitle}>Créez votre compte gratuitement</Text>
         </View>
@@ -361,6 +363,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
   scrollContent: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 },
   header: { alignItems: 'center', marginBottom: 32 },
+  logoCircle: { width: 64, height: 64, borderRadius: 12, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center' },
+  logoLetter: { color: '#FFF', fontSize: 28, fontWeight: '700' },
   title: { fontSize: 28, fontWeight: 'bold', color: '#EF4444', marginTop: 12 },
   subtitle: { fontSize: 16, color: '#666', marginTop: 8 },
   form: { marginBottom: 24 },

@@ -66,18 +66,18 @@ export async function sendWelcomeEmail(to: string, data: { username: string; fir
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Bienvenue sur Dénonciation</title>
+      <title>Bienvenue sur Dénonce</title>
     </head>
     <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="text-align: center; margin-bottom: 30px;">
-        <h1 style="color: #EF4444; margin-bottom: 10px;">🛡️ Dénonciation</h1>
+        <h1 style="color: #EF4444; margin-bottom: 10px;">🛡️ Dénonce</h1>
         <p style="font-size: 18px; color: #666;">Plateforme de signalement d'abus</p>
       </div>
       
       <div style="background: #f9f9f9; border-radius: 8px; padding: 30px;">
         <h2 style="color: #1F2937; margin-top: 0;">Bienvenue ${name} !</h2>
         
-        <p>Nous sommes ravis de vous compter parmi les membres de Dénonciation.</p>
+        <p>Nous sommes ravis de vous compter parmi les membres de Dénonce.</p>
         
         <p>Avec votre compte, vous pouvez :</p>
         <ul style="margin-bottom: 25px;">
@@ -91,7 +91,7 @@ export async function sendWelcomeEmail(to: string, data: { username: string; fir
         <p>Votre identité est protégée : tous vos signalements, commentaires et témoignages sont anonymes pour les autres utilisateurs. Seuls les administrateurs ont accès à votre identité.</p>
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.WEB_URL || 'https://denonciation.com'}/dashboard" style="background: #EF4444; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold;">Accéder à mon tableau de bord</a>
+          <a href="${process.env.WEB_URL || 'https://denonce.com'}/dashboard" style="background: #EF4444; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold;">Accéder à mon tableau de bord</a>
         </div>
         
         <p style="font-size: 14px; color: #666;">Votre nom d'utilisateur : <strong>${data.username}</strong></p>
@@ -99,7 +99,7 @@ export async function sendWelcomeEmail(to: string, data: { username: string; fir
       
       <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center;">
         <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
-        <p>© ${new Date().getFullYear()} Dénonciation. Tous droits réservés.</p>
+        <p>© ${new Date().getFullYear()} Dénonce. Tous droits réservés.</p>
       </div>
     </body>
     </html>

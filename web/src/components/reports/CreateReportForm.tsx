@@ -37,6 +37,8 @@ export default function CreateReportForm({ categories, cities, onSuccess, onCanc
   const [cityId, setCityId] = useState<number | null>(null);
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const [media, setMedia] = useState<File | null>(null);
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);

@@ -318,12 +318,18 @@ export default function LiveStreamDetail() {
     }).catch(() => toast.error('Erreur'));
   };
 
-  const handleReport = () => {
+  const handleReport = async () => {
     if (!isAuthenticated) { navigate('/login'); return; }
     const reason = prompt('Raison du signalement :');
-    if (reason) {
-      // TODO: Implémenter reportStream endpoint
+    if (!reason || reason.trim().length < 5) {
+      toast.error('Veuillez saisir une raison valide');
+      return;
+    }
+    try {
+      await liveAPI.reportStream(Number(id), 'stream_violation', reason.trim());
       toast.success('Signalement envoyé');
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Erreur lors de l\'envoi du signalement');
     }
   };
 
@@ -386,9 +392,9 @@ export default function LiveStreamDetail() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex" onMouseMove={handleMouseMove}>
+    <div className="fixed inset-0 bg-black flex flex-col lg:flex-row" onMouseMove={handleMouseMove}>
       {/* Zone vidéo principale */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative min-h-[65vh] lg:min-h-0">
         {isStreamer && !isBroadcasting ? (
           <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
             <h3 className="text-white text-2xl mb-2">Prêt à diffuser</h3>
@@ -404,7 +410,7 @@ export default function LiveStreamDetail() {
           </div>
         ) : (
           <>
-            <video ref={videoRef} className="w-full h-full object-contain" playsInline onClick={togglePlay} />
+            <video ref={videoRef} className="w-full h-full object-cover max-h-[85vh]" playsInline onClick={togglePlay} />
             {videoError && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                 <div className="text-center">

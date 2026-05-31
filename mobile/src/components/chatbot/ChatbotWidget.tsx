@@ -37,7 +37,7 @@ export default function ChatbotWidget() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Bonjour ! Je suis l\'assistant Dénonciation. Comment puis-je vous aider ?',
+      text: 'Bonjour ! Je suis l\'assistant Dénonce. Comment puis-je vous aider ?',
       sender: 'bot',
       type: 'suggestion',
       suggestions: ['📝 Signaler un abus', '📊 Mes signalements', '📂 Catégories', '🆘 Aide'],
@@ -145,7 +145,7 @@ export default function ChatbotWidget() {
             <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
               <Bot color="#FFF" size={24} />
               <View style={styles.headerText}>
-                <Text style={styles.headerTitle}>Assistant Dénonciation</Text>
+                <Text style={styles.headerTitle}>Assistant Dénonce</Text>
                 <Text style={styles.headerSubtitle}>En ligne • Réponse rapide</Text>
               </View>
               <TouchableOpacity onPress={() => setIsOpen(false)}>
@@ -233,6 +233,8 @@ export default function ChatbotWidget() {
                 placeholder="Écrivez votre message..."
                 placeholderTextColor={theme.colors.placeholder}
                 multiline
+                onSubmitEditing={handleSend}
+                blurOnSubmit={false}
               />
               <TouchableOpacity
                 style={[
@@ -242,6 +244,8 @@ export default function ChatbotWidget() {
                 ]}
                 onPress={handleSend}
                 disabled={!inputMessage.trim() || chatbotMutation.isPending}
+                activeOpacity={0.8}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Send color="#FFF" size={18} />
               </TouchableOpacity>
@@ -373,7 +377,8 @@ const makeStyles = (theme: any) => StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    maxHeight: 100,
+    minHeight: 44,
+    maxHeight: 120,
     fontSize: 14,
     borderWidth: 1,
     marginRight: 8,

@@ -194,7 +194,7 @@ app.get('/health', (req, res) => {
 
 app.get('/', (req, res) => {
   res.json({
-    name: 'Dénonciation API',
+    name: 'Dénonce API',
     version: '1.0.0',
     endpoints: [
       '/api/auth', '/api/users', '/api/reports', '/api/comments',

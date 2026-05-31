@@ -47,7 +47,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     socket.on('notification', async (data) => {
       await Notifications.scheduleNotificationAsync({
         content: {
-          title: 'Dénonciation',
+          title: 'Dénonce',
           body: data.content,
           data: data,
         },

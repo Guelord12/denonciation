@@ -44,13 +44,26 @@ export default function ReportCard({ report, currentUserId }: ReportCardProps) {
 
   return (
     <div className="card hover:shadow-lg transition-shadow">
-      {report.media_path && report.media_type === 'image' && (
+      {report.media_path && (
         <Link to={`/reports/${report.id}`}>
-          <img
-            src={report.media_path}
-            alt={report.title}
-            className="w-full h-48 object-cover"
-          />
+          {report.media_type === 'image' ? (
+            <img
+              src={report.media_path}
+              alt={report.title}
+              className="w-full h-48 object-cover"
+            />
+          ) : (
+            <div className="relative w-full h-48 bg-gray-900 rounded-lg overflow-hidden">
+              <div className="absolute inset-0 flex items-center justify-center text-white text-3xl">
+                ▶️
+              </div>
+              <img
+                src="/video-placeholder.png"
+                alt="Preview vidéo"
+                className="w-full h-full object-cover opacity-70"
+              />
+            </div>
+          )}
         </Link>
       )}
       

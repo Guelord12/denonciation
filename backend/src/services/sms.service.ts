@@ -106,7 +106,7 @@ export async function sendSMS(to: string, message: string): Promise<{ success: b
         const result = await sms.send({
           to: [cleanNumber],
           message,
-          from: process.env.AT_SENDER_ID || 'DENONCIATION'
+          from: process.env.AT_SENDER_ID || 'DENONCE'
         });
         
         logger.info(`✅ SMS sent via Africa's Talking: ${JSON.stringify(result)}`);
@@ -130,13 +130,13 @@ export async function sendSMS(to: string, message: string): Promise<{ success: b
 
 export async function sendWelcomeSMS(to: string, firstName?: string): Promise<boolean> {
   const name = firstName || 'Utilisateur';
-  const message = `[Dénonciation] Bienvenue ${name} ! Votre compte a été créé avec succès. Merci de contribuer à une société plus juste.`;
+  const message = `[Dénonce] Bienvenue ${name} ! Votre compte a été créé avec succès. Merci de contribuer à une société plus juste.`;
   const result = await sendSMS(to, message);
   return result.success;
 }
 
 export async function sendWarningSMS(to: string, violationCount: number, violationType: string): Promise<boolean> {
-  let message = `[DENONCIATION] Avertissement #${violationCount}: Violation des règles - ${violationType}. `;
+  let message = `[DENONCE] Avertissement #${violationCount}: Violation des règles - ${violationType}. `;
   
   if (violationCount === 1) {
     message += 'Ceci est votre premier avertissement. Veuillez respecter nos conditions d\'utilisation.';
@@ -151,13 +151,13 @@ export async function sendWarningSMS(to: string, violationCount: number, violati
 }
 
 export async function sendBanNotificationSMS(to: string, reason: string): Promise<boolean> {
-  const message = `[DENONCIATION] Votre compte a été banni. Raison: ${reason}. Contactez l'administration pour plus d'informations.`;
+  const message = `[DENONCE] Votre compte a été banni. Raison: ${reason}. Contactez l'administration pour plus d'informations.`;
   const result = await sendSMS(to, message);
   return result.success;
 }
 
 export async function sendVerificationSMS(to: string, code: string): Promise<boolean> {
-  const message = `[DENONCIATION] Votre code de vérification est: ${code}. Ce code expire dans 10 minutes.`;
+  const message = `[DENONCE] Votre code de vérification est: ${code}. Ce code expire dans 10 minutes.`;
   const result = await sendSMS(to, message);
   return result.success;
 }

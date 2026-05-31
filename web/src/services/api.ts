@@ -153,6 +153,8 @@ export const liveAPI = {
     api.post(`/live/${streamId}/gift`, { gift_id: giftId, amount, message }),
   getLeaderboard: (streamId: number, limit?: number) =>
     api.get(`/live/${streamId}/leaderboard`, { params: { limit } }),
+  reportStream: (streamId: number, type: string, reason: string) =>
+    api.post(`/live/${streamId}/report`, { type, reason }),
   joinStream: (streamId: number) =>
     api.post(`/live/${streamId}/join`),
   leaveStream: (streamId: number) =>

@@ -17,13 +17,15 @@ const LANGUAGES: Language[] = [
 export default function LanguageSelector() {
   const [isOpen, setIsOpen] = useState(false);
   const [currentLanguage, setCurrentLanguage] = useState<Language>(() => {
-    const saved = localStorage.getItem('language');
+    const saved = localStorage.getItem('language') || localStorage.getItem('setting_language');
     return LANGUAGES.find(l => l.code === saved) || LANGUAGES[0];
   });
 
   const handleLanguageChange = (language: Language) => {
     setCurrentLanguage(language);
     localStorage.setItem('language', language.code);
+    localStorage.setItem('setting_language', language.code);
+    localStorage.setItem('i18n_language', language.code);
     setIsOpen(false);
     
     // Recharger la page ou mettre à jour les traductions

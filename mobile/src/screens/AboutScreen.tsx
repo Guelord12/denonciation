@@ -46,7 +46,7 @@ export default function AboutScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Shield color="#EF4444" size={48} />
-        <Text style={styles.title}>Dénonciation</Text>
+        <Text style={styles.title}>Dénonce</Text>
         <Text style={styles.version}>Version 1.0.0</Text>
       </View>
 
@@ -98,7 +98,7 @@ export default function AboutScreen() {
 
       <View style={styles.footer}>
         <Text style={styles.copyright}>
-          © {new Date().getFullYear()} Dénonciation. Tous droits réservés.
+          © {new Date().getFullYear()} Dénonce. Tous droits réservés.
         </Text>
       </View>
     </ScrollView>

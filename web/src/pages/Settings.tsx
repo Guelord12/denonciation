@@ -54,7 +54,7 @@ export default function Settings() {
   const [highContrast, setHighContrast] = useState(() => localStorage.getItem('setting_highContrast') === 'true');
 
   // ✅ État pour la langue - initialisé depuis localStorage
-  const [language, setLanguage] = useState(() => localStorage.getItem('setting_language') || 'fr');
+  const [language, setLanguage] = useState(() => localStorage.getItem('language') || localStorage.getItem('setting_language') || 'fr');
 
   const { register: registerPassword, handleSubmit: handlePasswordSubmit, reset: resetPassword, watch, formState: { errors: passwordErrors } } = useForm<PasswordFormData>();
   const newPassword = watch('newPassword');
@@ -74,7 +74,7 @@ export default function Settings() {
       }
     }
 
-    const savedLang = localStorage.getItem('setting_language') || 'fr';
+    const savedLang = localStorage.getItem('language') || localStorage.getItem('setting_language') || 'fr';
     document.documentElement.setAttribute('lang', savedLang);
   }, []);
 
@@ -156,17 +156,17 @@ export default function Settings() {
   // ✅ Sauvegarde de la langue SANS rechargement (pas de déconnexion)
   const handleSaveLanguage = () => {
     saveSetting('setting_language', language);
+    saveSetting('language', language);
+    localStorage.setItem('language', language);
+    localStorage.setItem('i18n_language', language);
     document.documentElement.setAttribute('lang', language);
     
     // ✅ Appliquer la langue sans recharger la page
     const langName = languages.find(l => l.code === language)?.name || language;
     toast.success(`Langue changée en ${langName}`);
     
-    // ✅ Mettre à jour l'attribut lang pour le système i18n
-    localStorage.setItem('i18n_language', language);
-    
     // ✅ Dispatcher un événement personnalisé pour informer les autres composants
-    window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language } }));
+    window.dispatchEvent(new CustomEvent('languageChange', { detail: language }));
     
     // ✅ Appliquer la direction RTL si nécessaire (arabe, etc.)
     if (language === 'ar') {

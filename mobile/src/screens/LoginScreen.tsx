@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
 import { useAuthStore } from '../stores/authStore';
-import { Shield, Eye, EyeOff, User, Lock } from 'lucide-react-native';
+import { Eye, EyeOff, User, Lock } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const navigation = useNavigation();
@@ -69,8 +69,10 @@ export default function LoginScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Shield color="#EF4444" size={48} />
-          <Text style={styles.title}>Denonce</Text>
+          <View style={styles.logoCircle}>
+            <Text style={styles.logoLetter}>D</Text>
+          </View>
+          <Text style={styles.title}>Dénonce</Text>
           <Text style={styles.subtitle}>Connectez-vous à votre compte</Text>
         </View>
 
@@ -132,6 +134,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
   scrollContent: { flexGrow: 1, paddingHorizontal: 24, paddingTop: 80, paddingBottom: 40, justifyContent: 'center' },
   header: { alignItems: 'center', marginBottom: 40 },
+  logoCircle: { width: 64, height: 64, borderRadius: 12, backgroundColor: '#EF4444', justifyContent: 'center', alignItems: 'center' },
+  logoLetter: { color: '#FFF', fontSize: 28, fontWeight: '700' },
   title: { fontSize: 28, fontWeight: 'bold', color: '#EF4444', marginTop: 12 },
   subtitle: { fontSize: 16, color: '#666', marginTop: 8 },
   form: { marginBottom: 24 },
