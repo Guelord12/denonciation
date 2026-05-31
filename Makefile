@@ -4,8 +4,8 @@ help:
 	@echo "Commandes disponibles :"
 	@echo "  make install      - Installer toutes les dépendances"
 	@echo "  make dev          - Démarrer en mode développement"
-	@echo "  make build        - Builder le projet"
-	@echo "  make start        - Démarrer en production"
+	@echo "  make build        - Builder le backend et le web"
+	@echo "  make start        - Démarrer le backend en production"
 	@echo "  make clean        - Nettoyer les fichiers générés"
 	@echo "  make docker-up    - Démarrer avec Docker Compose"
 	@echo "  make docker-down  - Arrêter Docker Compose"
@@ -65,8 +65,8 @@ seed:
 	cd backend && npm run seed
 
 test:
-	cd backend && npm test
-	cd web && npm test
+	cd backend && npm run test
+	cd web && npm run test
 
 lint:
 	cd backend && npm run lint
