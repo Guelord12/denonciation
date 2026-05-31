@@ -350,7 +350,7 @@ export async function sendWarningSMS(req: AuthRequest, res: Response): Promise<v
     
     const violationCount = parseInt(violationsResult.rows[0]?.count || '0') + 1;
     
-    let warningMessage = `[DENONCIATION] Avertissement #${violationCount}: ${message}`;
+    let warningMessage = `[DENONCE] Avertissement #${violationCount}: ${message}`;
     
     if (violationCount >= 3) {
       warningMessage += ' Prochain manquement entraînera un bannissement.';

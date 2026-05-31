@@ -33,7 +33,7 @@ export async function sendEmail(options: {
     }
     
     const mailOptions = {
-      from: process.env.EMAIL_FROM || 'noreply@denonciation.com',
+      from: process.env.EMAIL_FROM || 'noreply@denonce.com',
       to: options.to,
       subject: options.subject,
       html: options.html,
@@ -107,7 +107,7 @@ export async function sendWelcomeEmail(to: string, data: { username: string; fir
   
   return sendEmail({
     to,
-    subject: 'Bienvenue sur Dénonciation !',
+    subject: 'Bienvenue sur Dénonce !',
     html
   });
 }
@@ -131,7 +131,7 @@ export async function sendReportStatusEmail(
       <title>Mise à jour de votre signalement</title>
     </head>
     <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h1 style="color: #EF4444;">🛡️ Dénonciation</h1>
+      <h1 style="color: #EF4444;">🛡️ Dénonce</h1>
       
       <div style="background: #f9f9f9; border-radius: 8px; padding: 30px;">
         <h2>Votre signalement a été ${statusText}</h2>
@@ -143,7 +143,7 @@ export async function sendReportStatusEmail(
         ${data.reason ? `<p><strong>Raison :</strong> ${data.reason}</p>` : ''}
         
         <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.WEB_URL || 'https://denonciation.com'}/dashboard" style="background: #EF4444; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px;">Voir mes signalements</a>
+          <a href="${process.env.WEB_URL || 'https://denonce.com'}/dashboard" style="background: #EF4444; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px;">Voir mes signalements</a>
         </div>
       </div>
     </body>

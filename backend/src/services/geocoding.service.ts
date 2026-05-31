@@ -31,7 +31,7 @@ interface LocationValidationResult {
 const API_CONFIG = {
   nominatim: {
     url: 'https://nominatim.openstreetmap.org/reverse',
-    userAgent: 'DenonciationApp/1.0.0 (denonciation.world@gmail.com)',
+    userAgent: 'DenonciationApp/1.0.0 (denonce.world@gmail.com)',
   },
   opencage: {
     apiKey: process.env.OPENCAGE_API_KEY || '',

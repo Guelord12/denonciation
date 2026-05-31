@@ -1,7 +1,7 @@
 {
-  "name": "denonciation-backend",
+  "name": "denonce-backend",
   "version": "1.0.0",
-  "description": "Backend API pour la plateforme de signalement Dénonciation",
+  "description": "Backend API pour la plateforme de signalement Dénonce",
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon",
@@ -92,7 +92,7 @@
   "engines": {
     "node": ">=20.0.0"
   },
-  "author": "Dénonciation",
+  "author": "Dénonce",
   "license": "UNLICENSED",
   "private": true
 }
