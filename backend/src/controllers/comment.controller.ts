@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth.middleware';
 import { query } from '../database/connection';
 import { logger } from '../utils/logger';
 import { io } from '../index';
+import { getLocationFromIP } from '../services/geolocation.service';
 
 // Fonction utilitaire pour extraire l'ID des params en toute sécurité
 function getParamId(params: any): string {
@@ -296,9 +297,31 @@ export async function deleteComment(req: AuthRequest, res: Response): Promise<vo
 }
 
 async function logActivity(userId: number, action: string, entityType: string, entityId: number, req: AuthRequest): Promise<void> {
-  await query(
-    `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [userId, action, entityType, entityId, req.ip || req.socket.remoteAddress, req.headers['user-agent']]
-  );
+  try {
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    // Get location from IP address
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    
+    try {
+      const location = await getLocationFromIP(ipAddress);
+      if (location) {
+        latitude = location.latitude;
+        longitude = location.longitude;
+      }
+    } catch (error) {
+      logger.warn('Failed to get location from IP:', error);
+    }
+
+    await query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent, latitude, longitude)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [userId, action, entityType, entityId, ipAddress, userAgent, latitude, longitude]
+    );
+  } catch (error) {
+    logger.error('Error logging activity:', error);
+    // Don't throw - logging should not break the main operation
+  }
 }

@@ -5,6 +5,7 @@ import { logger } from '../utils/logger';
 import { uploadToCloudinary } from '../config/cloudinary';
 import bcrypt from 'bcryptjs';
 import fs from 'fs/promises';
+import { getLocationFromIP } from '../services/geolocation.service';
 
 // =====================================================
 // TYPES ET INTERFACES
@@ -56,20 +57,40 @@ async function logActivity(
   req: Request
 ): Promise<void> {
   try {
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    // Get location from IP address
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    
+    try {
+      const location = await getLocationFromIP(ipAddress);
+      if (location) {
+        latitude = location.latitude;
+        longitude = location.longitude;
+      }
+    } catch (error) {
+      logger.warn('Failed to get location from IP:', error);
+    }
+
     await query(
-      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
-       VALUES ($1, $2, $3, $4, $5, $6)`,
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent, latitude, longitude)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
       [
         userId,
         action,
         entityType,
         String(entityId),
-        req.ip || req.socket.remoteAddress || 'unknown',
-        req.headers['user-agent'] || 'unknown'
+        ipAddress,
+        userAgent,
+        latitude,
+        longitude
       ]
     );
   } catch (error) {
     logger.error('❌ Log activity error:', error);
+    // Don't throw - logging should not break the main operation
   }
 }
 

@@ -156,3 +156,72 @@ export async function sendReportStatusEmail(
     html
   });
 }
+
+export async function sendPasswordResetEmail(
+  to: string,
+  data: {
+    username: string;
+    first_name?: string;
+    temporaryPassword: string;
+  }
+): Promise<boolean> {
+  const name = data.first_name || data.username;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Réinitialisation de mot de passe</title>
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="text-align: center; margin-bottom: 30px;">
+        <h1 style="color: #EF4444; margin-bottom: 10px;">🛡️ Dénonciation</h1>
+      </div>
+      
+      <div style="background: #f9f9f9; border-radius: 8px; padding: 30px;">
+        <h2 style="color: #1F2937; margin-top: 0;">Réinitialisation de mot de passe</h2>
+        
+        <p>Bonjour ${name},</p>
+        
+        <p>Nous avons reçu une demande de réinitialisation de mot de passe pour votre compte.</p>
+        
+        <p style="background: #FEE2E2; border-left: 4px solid #EF4444; padding: 15px; border-radius: 4px;">
+          <strong>Votre mot de passe temporaire :</strong><br/>
+          <code style="font-size: 16px; font-weight: bold; color: #DC2626; font-family: 'Courier New', monospace;">${data.temporaryPassword}</code>
+        </p>
+        
+        <p><strong>Instructions :</strong></p>
+        <ol>
+          <li>Connectez-vous avec votre mot de passe temporaire</li>
+          <li>Allez dans les paramètres de votre compte</li>
+          <li>Changez votre mot de passe par un nouveau</li>
+        </ol>
+        
+        <p style="color: #EF4444; font-weight: bold;">⚠️ Important :</p>
+        <ul>
+          <li>Ce mot de passe temporaire expire dans 24 heures</li>
+          <li>Ne partagez ce mot de passe avec personne</li>
+          <li>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email</li>
+        </ul>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.WEB_URL || 'https://denonciation.com'}/login" style="background: #EF4444; color: white; padding: 12px 30px; text-decoration: none; border-radius: 25px; font-weight: bold;">Se connecter</a>
+        </div>
+      </div>
+      
+      <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 12px; color: #999; text-align: center;">
+        <p>Cet email a été envoyé automatiquement, merci de ne pas y répondre.</p>
+        <p>© ${new Date().getFullYear()} Dénonciation. Tous droits réservés.</p>
+      </div>
+    </body>
+    </html>
+  `;
+  
+  return sendEmail({
+    to,
+    subject: 'Réinitialisation de votre mot de passe - Dénonciation',
+    html
+  });
+}

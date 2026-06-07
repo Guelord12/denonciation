@@ -37,7 +37,7 @@ export default function ChatbotWidget() {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Bonjour ! Je suis l\'assistant Dénonciation. Comment puis-je vous aider ?',
+      text: 'Bonjour ! Je suis l\'assistant Dénonce. Comment puis-je vous aider ?',
       sender: 'bot',
       type: 'suggestion',
       suggestions: ['📝 Signaler un abus', '📊 Mes signalements', '📂 Catégories', '🆘 Aide'],
@@ -145,7 +145,7 @@ export default function ChatbotWidget() {
             <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
               <Bot color="#FFF" size={24} />
               <View style={styles.headerText}>
-                <Text style={styles.headerTitle}>Assistant Dénonciation</Text>
+                <Text style={styles.headerTitle}>Assistant Dénonce</Text>
                 <Text style={styles.headerSubtitle}>En ligne • Réponse rapide</Text>
               </View>
               <TouchableOpacity onPress={() => setIsOpen(false)}>

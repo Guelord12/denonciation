@@ -46,7 +46,7 @@ export default function ContactScreen() {
   };
 
   const handleEmail = () => {
-    Linking.openURL('mailto:contact@denonciation.com');
+    Linking.openURL('mailto:contact@denonce.app');
   };
 
   const handlePhone = () => {
@@ -70,7 +70,7 @@ export default function ContactScreen() {
           <TouchableOpacity style={styles.contactCard} onPress={handleEmail}>
             <Mail color="#EF4444" size={24} />
             <Text style={styles.contactCardTitle}>Email</Text>
-            <Text style={styles.contactCardText}>contact@denonciation.com</Text>
+            <Text style={styles.contactCardText}>contact@denonce.app</Text>
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.contactCard} onPress={handlePhone}>

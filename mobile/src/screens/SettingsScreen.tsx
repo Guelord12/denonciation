@@ -138,7 +138,7 @@ export default function SettingsScreen() {
   };
 
   const handleContactSupport = () => {
-    Linking.openURL('mailto:support@denonciation.com');
+    Linking.openURL('mailto:support@denonce.app');
   };
 
   const handleFAQ = () => {

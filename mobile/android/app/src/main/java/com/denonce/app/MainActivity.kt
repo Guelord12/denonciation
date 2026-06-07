@@ -1,4 +1,4 @@
-package com.denonciation.app
+package com.denonce.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

@@ -5,6 +5,7 @@ import { redisClient } from '../config/redis';
 import { logger } from '../utils/logger';
 import { io } from '../index';
 import crypto from 'crypto';
+import { getLocationFromIP } from '../services/geolocation.service';
 
 // =====================================================
 // TYPES ET INTERFACES
@@ -46,13 +47,31 @@ function getParamId(params: any): string {
 
 async function logActivity(userId: number, action: string, entityType: string, entityId: number, req: Request, metadata?: any): Promise<void> {
   try {
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    // Get location from IP address
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    
+    try {
+      const location = await getLocationFromIP(ipAddress);
+      if (location) {
+        latitude = location.latitude;
+        longitude = location.longitude;
+      }
+    } catch (error) {
+      logger.warn('Failed to get location from IP:', error);
+    }
+
     await query(
-      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent, metadata) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [userId, action, entityType, entityId, req.ip || req.socket.remoteAddress || 'unknown', req.headers['user-agent'] || 'unknown', metadata ? JSON.stringify(metadata) : null]
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent, details, latitude, longitude) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [userId, action, entityType, entityId, ipAddress, userAgent, metadata ? JSON.stringify(metadata) : null, latitude, longitude]
     );
   } catch (error) {
     logger.error('❌ Log activity error:', error);
+    // Don't throw - logging should not break the main operation
   }
 }
 

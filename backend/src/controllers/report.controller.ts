@@ -5,6 +5,7 @@ import { uploadToCloudinary } from '../config/cloudinary';
 import { io } from '../index';
 import { AuthRequest } from '../middleware/auth.middleware';
 import { moderateReport, autoModerateAllPending } from '../services/aiModeration.service';
+import { getLocationFromIP } from '../services/geolocation.service';
 
 // =====================================================
 // FONCTIONS UTILITAIRES
@@ -100,18 +101,33 @@ async function logActivity(
   entityId: number, 
   req: Request
 ): Promise<void> {
-  await query(
-    `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [
-      userId, 
-      action, 
-      entityType, 
-      entityId, 
-      req.ip || req.socket.remoteAddress || 'unknown', 
-      req.headers['user-agent'] || 'unknown'
-    ]
-  );
+  try {
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    // Get location from IP address
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    
+    try {
+      const location = await getLocationFromIP(ipAddress);
+      if (location) {
+        latitude = location.latitude;
+        longitude = location.longitude;
+      }
+    } catch (error) {
+      logger.warn('Failed to get location from IP:', error);
+    }
+
+    await query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent, latitude, longitude)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [userId, action, entityType, entityId, ipAddress, userAgent, latitude, longitude]
+    );
+  } catch (error) {
+    logger.error('Error logging activity:', error);
+    // Don't throw - logging should not break the main operation
+  }
 }
 
 // =====================================================

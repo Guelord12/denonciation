@@ -207,7 +207,21 @@ export default function LiveStreamDetail() {
       let mediaStream: MediaStream;
 
       if (sourceType === 'screen') {
-        mediaStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        try {
+          mediaStream = await navigator.mediaDevices.getDisplayMedia({ 
+            video: { cursor: 'always' }, 
+            audio: true 
+          });
+        } catch (screenError: any) {
+          if (screenError.name === 'NotAllowedError') {
+            toast.error('Permission de partage d\'écran refusée');
+            return;
+          } else if (screenError.name === 'NotSupportedError') {
+            toast.error('Partage d\'écran non supporté sur ce navigateur');
+            return;
+          }
+          throw screenError;
+        }
       } else {
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: 'user', frameRate: 30 },
@@ -246,8 +260,7 @@ export default function LiveStreamDetail() {
       toast.success('Diffusion en direct démarrée !');
 
     } catch (error: any) {
-      console.error('Broadcast error:', error);
-      toast.error(error.name === 'NotAllowedError' ? 'Permission refusée. Autorisez l\'accès à la caméra.' : 'Erreur lors du démarrage de la diffusion');
+      toast.error(error.name === 'NotAllowedError' ? 'Permission refusée. Autorisez l\'accès à la caméra.' : 'Erreur : ' + (error.message || 'Erreur lors du démarrage de la diffusion'));
     }
   };
 
@@ -386,9 +399,9 @@ export default function LiveStreamDetail() {
   }
 
   return (
-    <div className="fixed inset-0 bg-black flex" onMouseMove={handleMouseMove}>
+    <div className="fixed inset-0 bg-black flex flex-col lg:flex-row" onMouseMove={handleMouseMove}>
       {/* Zone vidéo principale */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative h-[50vh] lg:h-auto">
         {isStreamer && !isBroadcasting ? (
           <div className="w-full h-full flex flex-col items-center justify-center bg-gray-900">
             <h3 className="text-white text-2xl mb-2">Prêt à diffuser</h3>
@@ -492,7 +505,7 @@ export default function LiveStreamDetail() {
 
       {/* Sidebar Chat */}
       {showChat && (
-        <div className="w-96 bg-gray-900 border-l border-gray-800 flex flex-col z-20">
+        <div className="h-[50vh] lg:h-auto lg:w-96 bg-gray-900 border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col z-20 overflow-hidden">
           <div className="p-4 border-b border-gray-800">
             <div className="flex justify-between items-center">
               <h3 className="font-semibold text-white">Chat en direct</h3>
@@ -517,7 +530,7 @@ export default function LiveStreamDetail() {
           </div>
 
           {isAuthenticated ? (
-            <form onSubmit={sendMessage} className="p-4 border-t border-gray-800 flex gap-2">
+            <form onSubmit={sendMessage} className="p-4 border-t border-gray-800 flex gap-2 sticky bottom-0 z-50 bg-gray-900">
               <input type="text" value={inputMessage} onChange={(e) => setInputMessage(e.target.value)} placeholder="Message..." className="flex-1 bg-gray-800 text-white rounded-full px-4 py-2 text-sm" />
               <button type="submit" disabled={!inputMessage.trim()} className="p-2 bg-red-600 text-white rounded-full hover:bg-red-700 disabled:opacity-50"><Send className="w-4 h-4" /></button>
             </form>

@@ -57,7 +57,7 @@ export default function InformationScreen() {
 
   const faqItems: FAQItem[] = [
     {
-      question: 'Comment fonctionne l\'anonymat sur Dénonciation ?',
+      question: 'Comment fonctionne l\'anonymat sur Dénonce ?',
       answer: 'Tous les signalements, commentaires, témoignages, likes et partages sont totalement anonymes. Les autres utilisateurs ne verront que "Utilisateur anonyme". Seuls les administrateurs ont accès aux identités réelles pour pouvoir traiter les signalements.',
     },
     {
@@ -120,7 +120,7 @@ export default function InformationScreen() {
   ];
 
   const handleContact = () => {
-    Linking.openURL('mailto:contact@denonciation.com');
+    Linking.openURL('mailto:contact@denonce.app');
   };
 
   return (
@@ -130,7 +130,7 @@ export default function InformationScreen() {
         <Shield color="#EF4444" size={48} />
         <Text style={styles.heroTitle}>Informations et Ressources</Text>
         <Text style={styles.heroSubtitle}>
-          Tout ce que vous devez savoir sur Dénonciation, notre mission, et comment nous protégeons votre anonymat.
+          Tout ce que vous devez savoir sur Dénonce, notre mission, et comment nous protégeons votre anonymat.
         </Text>
       </View>
 
@@ -139,7 +139,7 @@ export default function InformationScreen() {
         <Lock color="#10B981" size={32} />
         <Text style={styles.anonymatTitle}>Votre anonymat est notre priorité</Text>
         <Text style={styles.anonymatText}>
-          Sur Dénonciation, votre identité est totalement protégée. Tous les signalements, commentaires, 
+          Sur Dénonce, votre identité est totalement protégée. Tous les signalements, commentaires, 
           témoignages, likes et partages apparaissent sous le pseudonyme "Utilisateur anonyme". 
           Seuls les administrateurs ont accès à votre véritable identité.
         </Text>

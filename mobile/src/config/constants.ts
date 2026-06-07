@@ -19,8 +19,8 @@ const getServerConfig = () => {
   
   // En production, utiliser le domaine réel
   return {
-    api: 'https://api.denonciation.com/api',
-    socket: 'https://api.denonciation.com',
+    api: 'https://api.denonce.app/api',
+    socket: 'https://api.denonce.app',
   };
 };
 

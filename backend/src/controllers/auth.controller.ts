@@ -6,8 +6,9 @@ import { logger } from '../utils/logger';
 import { validateEmail, validatePassword, validateUsername } from '../utils/validators';
 import { redisClient } from '../config/redis';
 import { AuthRequest } from '../middleware/auth.middleware';
-import { sendWelcomeEmail } from '../services/email.service';
+import { sendWelcomeEmail, sendPasswordResetEmail } from '../services/email.service';
 import { sendSMS } from '../services/sms.service';
+import { getLocationFromIP } from '../services/geolocation.service';
 
 // Fonctions utilitaires pour les tokens
 function generateAccessToken(userId: number): string {
@@ -72,11 +73,33 @@ async function createSession(userId: number, token: string, req: Request): Promi
 }
 
 async function logActivity(userId: number, action: string, entityType: string, entityId: number, req: Request): Promise<void> {
-  await query(
-    `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [userId, action, entityType, entityId, req.ip || req.socket.remoteAddress, req.headers['user-agent']]
-  );
+  try {
+    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
+    const userAgent = req.headers['user-agent'] || 'unknown';
+    
+    // Get location from IP address
+    let latitude: number | null = null;
+    let longitude: number | null = null;
+    
+    try {
+      const location = await getLocationFromIP(ipAddress);
+      if (location) {
+        latitude = location.latitude;
+        longitude = location.longitude;
+      }
+    } catch (error) {
+      logger.warn('Failed to get location from IP:', error);
+    }
+
+    await query(
+      `INSERT INTO activity_logs (user_id, action, entity_type, entity_id, ip_address, user_agent, latitude, longitude)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [userId, action, entityType, entityId, ipAddress, userAgent, latitude, longitude]
+    );
+  } catch (error) {
+    logger.error('Error logging activity:', error);
+    // Don't throw - logging should not break the main operation
+  }
 }
 
 async function notifyAdmins(type: string, content: string, relatedId: number): Promise<void> {
@@ -491,7 +514,7 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     }
 
     const result = await query(
-      'SELECT id, username FROM users WHERE email = $1',
+      'SELECT id, username, first_name FROM users WHERE email = $1',
       [email]
     );
 
@@ -502,23 +525,58 @@ export async function forgotPassword(req: Request, res: Response): Promise<void>
     }
 
     const user = result.rows[0];
-    const resetToken = jwt.sign(
-      { userId: user.id, type: 'reset' },
-      process.env.JWT_SECRET!,
-      { expiresIn: '1h' }
+    
+    // Générer un mot de passe temporaire
+    const temporaryPassword = generateTemporaryPassword();
+    const password_hash = await bcrypt.hash(temporaryPassword, 10);
+    
+    // Mettre à jour le mot de passe dans la base de données
+    await query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2',
+      [password_hash, user.id]
     );
 
-    // Envoyer l'email de réinitialisation
-    const resetLink = `${process.env.WEB_URL}/reset-password?token=${resetToken}`;
+    // Envoyer l'email avec le mot de passe temporaire
+    await sendPasswordResetEmail(email, { 
+      username: user.username, 
+      first_name: user.first_name,
+      temporaryPassword 
+    });
+
+    // Log l'activité
+    await logActivity(user.id, 'password_reset_requested', 'user', user.id, req);
     
-    // TODO: Implémenter l'envoi d'email de réinitialisation
-    console.log(`📧 Reset password link for ${email}: ${resetLink}`);
+    logger.info(`📧 Password reset email sent to ${email}`);
 
     res.json({ message: 'Si un compte existe avec cet email, vous recevrez un lien de réinitialisation.' });
   } catch (error) {
     logger.error('Forgot password error:', error);
     res.status(500).json({ error: 'Erreur serveur' });
   }
+}
+
+function generateTemporaryPassword(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let password = '';
+  let hasUpper = false, hasLower = false, hasNumber = false, hasSpecial = false;
+  
+  while (!hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+    const randomChar = chars.charAt(Math.floor(Math.random() * chars.length));
+    password += randomChar;
+    
+    if (/[A-Z]/.test(randomChar)) hasUpper = true;
+    if (/[a-z]/.test(randomChar)) hasLower = true;
+    if (/[0-9]/.test(randomChar)) hasNumber = true;
+    if (/[!@#$%^&*]/.test(randomChar)) hasSpecial = true;
+  }
+  
+  // Remplir jusqu'à 12 caractères
+  while (password.length < 12) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  
+  // Mélanger le mot de passe
+  return password.split('').sort(() => 0.5 - Math.random()).join('');
 }
 
 export async function resetPassword(req: Request, res: Response): Promise<void> {

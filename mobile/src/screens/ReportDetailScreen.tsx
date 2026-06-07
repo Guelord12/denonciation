@@ -225,7 +225,7 @@ export default function ReportDetailScreen() {
     try {
       await Share.share({
         message: `Découvrez ce signalement : ${report?.title}`,
-        url: `https://denonciation.com/reports/${id}`,
+        url: `https://denonce.app/reports/${id}`,
       });
     } catch (error) {
       console.error('Share error:', error);

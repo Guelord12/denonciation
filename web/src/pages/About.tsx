@@ -1,10 +1,5 @@
 import { Shield, Users, Eye, Globe, Award, Heart, LucideIcon } from 'lucide-react';
 
-interface TeamMember {
-  name: string;
-  role: string;
-}
-
 interface Stat {
   icon: LucideIcon;
   value: string;
@@ -41,13 +36,6 @@ export default function About() {
       title: 'Transparence',
       description: 'Nous nous engageons à traiter chaque signalement avec transparence.',
     },
-  ];
-
-  const team: TeamMember[] = [
-    { name: 'Alice Dupont', role: 'Fondatrice' },
-    { name: 'Bob Martin', role: 'Développeur' },
-    { name: 'Carol Lee', role: 'Responsable Contenu' },
-    { name: 'David Chen', role: 'Responsable Modération' },
   ];
 
   return (
@@ -129,24 +117,6 @@ export default function About() {
               <div className="text-5xl font-bold text-red-200 mb-4">{item.step}</div>
               <h3 className="text-xl font-bold mb-2">{item.title}</h3>
               <p className="text-gray-600">{item.description}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Team */}
-      <section>
-        <h2 className="text-3xl font-bold text-center mb-12">Notre Équipe</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {team.map((member: TeamMember, index: number) => (
-            <div key={index} className="bg-white rounded-xl shadow p-6 text-center">
-              <div className="w-24 h-24 bg-gray-200 rounded-full mx-auto mb-4 flex items-center justify-center">
-                <span className="text-3xl font-bold text-gray-400">
-                  {member.name.charAt(0)}
-                </span>
-              </div>
-              <h3 className="font-bold">{member.name}</h3>
-              <p className="text-sm text-gray-600">{member.role}</p>
             </div>
           ))}
         </div>

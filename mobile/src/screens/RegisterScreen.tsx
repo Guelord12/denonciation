@@ -125,7 +125,9 @@ export default function RegisterScreen() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Shield color="#EF4444" size={48} />
+          <View style={styles.dLogoContainer}>
+            <Text style={styles.dLogo}>D</Text>
+          </View>
           <Text style={styles.title}>Inscription</Text>
           <Text style={styles.subtitle}>Créez votre compte gratuitement</Text>
         </View>
@@ -361,6 +363,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FFF' },
   scrollContent: { paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40 },
   header: { alignItems: 'center', marginBottom: 32 },
+  dLogoContainer: { width: 80, height: 80, backgroundColor: '#EF4444', borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginBottom: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3.84, elevation: 5 },
+  dLogo: { fontSize: 48, fontWeight: 'bold', color: '#FFF' },
   title: { fontSize: 28, fontWeight: 'bold', color: '#EF4444', marginTop: 12 },
   subtitle: { fontSize: 16, color: '#666', marginTop: 8 },
   form: { marginBottom: 24 },

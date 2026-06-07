@@ -172,10 +172,8 @@ export default function LiveStreamScreen() {
 
       if (streamData.hls_url) {
         setStreamType('hls');
-        console.log('📺 Stream type: HLS');
       } else {
         setStreamType('webrtc');
-        console.log('📡 Stream type: WebRTC');
         if (streamData.user_id !== user?.id) {
           initializeWebRTC();
         }
@@ -219,7 +217,6 @@ export default function LiveStreamScreen() {
   const initializeWebRTC = useCallback(() => {
     if (!socket || !streamId || isStreamer) return;
     
-    console.log('📡 Initializing WebRTC for stream:', streamId);
     setConnectionStatus('connecting');
     setBroadcasterReady(false);
     
@@ -227,7 +224,6 @@ export default function LiveStreamScreen() {
     
     connectionTimeoutRef.current = setTimeout(() => {
       if (connectionStatus === 'connecting' && !broadcasterReady) {
-        console.warn('⏰ WebRTC connection timeout');
         setConnectionStatus('disconnected');
         setVideoStatus({ isLoaded: false, error: 'Délai de connexion dépassé. Le streamer n\'a pas encore démarré.' });
       }
@@ -239,14 +235,11 @@ export default function LiveStreamScreen() {
 
   const createPeerConnection = useCallback(async (broadcasterId: string) => {
     try {
-      console.log('🔗 Creating peer connection...');
-      
       const pc = new RTCPeerConnection({
         iceServers: ICE_SERVERS,
       });
 
       (pc as any).addEventListener('track', (event: any) => {
-        console.log('🎥 Received remote track');
         if (event.streams && event.streams[0]) {
           setRemoteStream(event.streams[0]);
           setConnectionStatus('connected');
@@ -255,7 +248,6 @@ export default function LiveStreamScreen() {
       });
 
       (pc as any).addEventListener('connectionstatechange', () => {
-        console.log('📊 WebRTC state:', pc.connectionState);
         switch (pc.connectionState) {
           case 'connected':
             setConnectionStatus('connected');
@@ -290,7 +282,6 @@ export default function LiveStreamScreen() {
       
       return pc;
     } catch (error) {
-      console.error('❌ Failed to create peer connection:', error);
       return null;
     }
   }, [socket, streamId]);
@@ -343,7 +334,6 @@ export default function LiveStreamScreen() {
   const startBroadcasting = useCallback(async () => {
     try {
       setBroadcastError(null);
-      console.log('🎥 Starting broadcast...');
       
       // Récupérer le flux de la caméra via WebRTC
       const stream = await mediaDevices.getUserMedia({
@@ -357,7 +347,6 @@ export default function LiveStreamScreen() {
       });
       
       localStreamRef.current = stream;
-      console.log('✅ Local stream obtained');
       
       // Créer une connexion peer pour chaque spectateur
       const pc = new RTCPeerConnection({
@@ -368,7 +357,6 @@ export default function LiveStreamScreen() {
       stream.getTracks().forEach(track => {
         if (pc && localStreamRef.current) {
           pc.addTrack(track, localStreamRef.current);
-          console.log('➕ Track added:', track.kind);
         }
       });
       
@@ -379,13 +367,12 @@ export default function LiveStreamScreen() {
             targetId: 'broadcaster',
             candidate: event.candidate,
           });
-          console.log('🧊 ICE candidate sent');
         }
       });
 
       // Gérer l'état de la connexion
       (pc as any).addEventListener('connectionstatechange', () => {
-        console.log('📊 Broadcaster PC state:', pc.connectionState);
+        // Connection state monitoring
       });
       
       peerConnectionRef.current = pc;
@@ -397,10 +384,7 @@ export default function LiveStreamScreen() {
       setConnectionStatus('connected');
       Toast.show({ type: 'success', text1: 'Diffusion en direct démarrée ! 🎥' });
       
-      console.log('✅ Broadcast started successfully');
-      
     } catch (error: any) {
-      console.error('❌ Broadcast error:', error);
       setBroadcastError(error.message || 'Erreur lors du démarrage');
       
       if (error.message?.includes('permission')) {
@@ -416,13 +400,10 @@ export default function LiveStreamScreen() {
   }, [cameraType, isMuted, socket, streamId, user]);
 
   const stopBroadcasting = useCallback(() => {
-    console.log('🛑 Stopping broadcast...');
-    
     // Arrêter les tracks locales
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => {
         track.stop();
-        console.log('⏹️ Track stopped:', track.kind);
       });
       localStreamRef.current = null;
     }
@@ -444,8 +425,6 @@ export default function LiveStreamScreen() {
     setIsBroadcasting(false);
     setConnectionStatus('disconnected');
     setBroadcastError(null);
-    
-    console.log('✅ Broadcast stopped');
   }, [socket, streamId]);
 
   const toggleVideo = useCallback(() => {
@@ -494,8 +473,6 @@ export default function LiveStreamScreen() {
     });
 
     socket.on('webrtc_offer', async (data: { socketId: string; offer: RTCSessionDescription }) => {
-      console.log('📡 Received WebRTC offer from:', data.socketId);
-      
       try {
         if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current);
         
@@ -510,10 +487,7 @@ export default function LiveStreamScreen() {
           targetId: data.socketId,
           answer: answer,
         });
-        
-        console.log('✅ WebRTC answer sent');
       } catch (error) {
-        console.error('❌ WebRTC error:', error);
         setConnectionStatus('disconnected');
       }
     });
@@ -524,7 +498,7 @@ export default function LiveStreamScreen() {
           await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(data.candidate));
         }
       } catch (error) {
-        console.warn('ICE candidate error:', error);
+        // ICE candidate error - continue
       }
     });
 
@@ -549,7 +523,6 @@ export default function LiveStreamScreen() {
     // ✅ NOUVEAU : Événement pour que le streamer envoie son offre WebRTC
     socket.on('spectator_joined', async (data: { spectatorId: string }) => {
       if (isStreamer && isBroadcasting && peerConnectionRef.current && localStreamRef.current) {
-        console.log('👤 Spectator joined, sending offer to:', data.spectatorId);
         try {
           const offer = await peerConnectionRef.current.createOffer();
           await peerConnectionRef.current.setLocalDescription(offer);
@@ -559,9 +532,8 @@ export default function LiveStreamScreen() {
             targetId: data.spectatorId,
             offer: offer,
           });
-          console.log('✅ Offer sent to spectator');
         } catch (error) {
-          console.error('Failed to send offer:', error);
+          // Offer send error - continue
         }
       }
     });
@@ -653,7 +625,7 @@ export default function LiveStreamScreen() {
         await Sharing.shareAsync(shareUrl, { dialogTitle: 'Partager le stream' });
       }
     } catch (error) {
-      console.error('Share error:', error);
+      // Share error - continue
     }
   };
 
@@ -1012,7 +984,7 @@ export default function LiveStreamScreen() {
 // STYLES
 // =====================================================
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: '#000', flexDirection: 'column' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#000' },
   loadingText: { color: '#FFF', marginTop: 12, fontSize: 16 },
   videoContainer: { flex: 1, position: 'relative' },
@@ -1051,7 +1023,7 @@ const styles = StyleSheet.create({
   startStreamButton: { position: 'absolute', bottom: 100, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', backgroundColor: '#EF4444', paddingHorizontal: 24, paddingVertical: 14, borderRadius: 30, gap: 10, zIndex: 10 },
   startStreamText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   chatToggle: { position: 'absolute', right: 16, bottom: 100, width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 10 },
-  chatContainer: { position: 'absolute', right: 0, top: Platform.OS === 'ios' ? 140 : 120, bottom: 100, width: width * 0.75, backgroundColor: 'rgba(0,0,0,0.95)', borderTopLeftRadius: 12, borderBottomLeftRadius: 12, zIndex: 20 },
+  chatContainer: { height: '40%', minHeight: 250, backgroundColor: 'rgba(0,0,0,0.95)', borderTopWidth: 1, borderTopColor: '#333', zIndex: 20 },
   chatHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12, borderBottomWidth: 1, borderBottomColor: '#333' },
   chatTitle: { color: '#FFF', fontSize: 16, fontWeight: '600' },
   chatActions: { flexDirection: 'row', gap: 8 },

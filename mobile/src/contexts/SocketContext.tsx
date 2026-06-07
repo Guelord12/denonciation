@@ -16,7 +16,7 @@ const getSocketUrl = () => {
     console.log('🔌 Socket URL:', url);
     return url;
   }
-  return 'https://api.denonciation.com';
+  return 'https://api.denonce.app';
 };
 
 const SOCKET_URL = getSocketUrl();

@@ -75,7 +75,7 @@ const faqCategories = [
       },
       {
         question: 'Que faire si mon compte est piraté ?',
-        answer: 'Contactez immédiatement notre support à security@denonciation.com. Nous vous aiderons à récupérer votre compte.',
+        answer: 'Contactez immédiatement notre support à security@denonce.app. Nous vous aiderons à récupérer votre compte.',
       },
       {
         question: 'Comment supprimer mon compte ?',
@@ -145,7 +145,7 @@ export default function FAQ() {
         <p className="text-gray-600">
           Vous trouverez ci-dessous les réponses aux questions les plus fréquemment posées.
           Si vous ne trouvez pas la réponse à votre question, n'hésitez pas à{' '}
-          <a href="mailto:support@denonciation.com" className="text-red-600 hover:underline">
+          <a href="mailto:support@denonce.app" className="text-red-600 hover:underline">
             nous contacter
           </a>
           .
@@ -164,7 +164,7 @@ export default function FAQ() {
           Notre équipe de support est disponible pour vous aider.
         </p>
         <a
-          href="denonciation.world@gmail.com"
+          href="mailto:support@denonce.app"
           className="inline-block bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700"
         >
           Contacter le support

@@ -35,25 +35,25 @@ export default function AboutScreen() {
   ];
 
   const handleContact = () => {
-    Linking.openURL('mailto:contact@denonciation.com');
+    Linking.openURL('mailto:contact@denonce.app');
   };
 
   const handleWebsite = () => {
-    Linking.openURL('https://denonciation.com');
+    Linking.openURL('https://denonce.app');
   };
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Shield color="#EF4444" size={48} />
-        <Text style={styles.title}>Dénonciation</Text>
+        <Text style={styles.title}>Dénonce</Text>
         <Text style={styles.version}>Version 1.0.0</Text>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Notre Mission</Text>
         <Text style={styles.description}>
-          Dénonciation est une plateforme citoyenne dédiée à la lutte contre les abus
+          Dénonce est une plateforme citoyenne dédiée à la lutte contre les abus
           et les injustices. Notre mission est de donner une voix à ceux qui n'en ont pas
           et de créer un espace sûr pour signaler les violations des droits humains.
         </Text>
@@ -88,17 +88,17 @@ export default function AboutScreen() {
         <Text style={styles.sectionTitle}>Contact</Text>
         <TouchableOpacity style={styles.contactItem} onPress={handleContact}>
           <Mail color="#666" size={20} />
-          <Text style={styles.contactText}>contact@denonciation.com</Text>
+          <Text style={styles.contactText}>contact@denonce.app</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.contactItem} onPress={handleWebsite}>
           <Globe color="#666" size={20} />
-          <Text style={styles.contactText}>www.denonciation.com</Text>
+          <Text style={styles.contactText}>www.denonce.app</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.footer}>
         <Text style={styles.copyright}>
-          © {new Date().getFullYear()} Dénonciation. Tous droits réservés.
+          © {new Date().getFullYear()} Dénonce. Tous droits réservés.
         </Text>
       </View>
     </ScrollView>

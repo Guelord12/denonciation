@@ -24,6 +24,7 @@ import {
   Shield,
   Ban,
   CheckCircle,
+  MapPin,
 } from 'lucide-react';
 
 const ACTION_ICONS: Record<string, any> = {
@@ -190,6 +191,7 @@ export default function AdminLogs() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Utilisateur</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Détails</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Localisation</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                 </tr>
               </thead>
@@ -214,6 +216,24 @@ export default function AdminLogs() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 font-mono">
                         {log.ip_address || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {log.latitude && log.longitude ? (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-red-500" />
+                            <a
+                              href={`https://www.google.com/maps?q=${log.latitude},${log.longitude}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline text-blue-600"
+                              title={`${log.latitude}, ${log.longitude}`}
+                            >
+                              {log.latitude.toFixed(4)}, {log.longitude.toFixed(4)}
+                            </a>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {log.created_at

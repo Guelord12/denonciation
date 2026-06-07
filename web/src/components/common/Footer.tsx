@@ -98,7 +98,7 @@ export default function Footer() {
                 <Facebook className="w-6 h-6" />
               </a>
               <a
-                href="https://twitter.com/denonciation"
+                href="https://twitter.com/denonce"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-red-500 transition"
@@ -107,7 +107,7 @@ export default function Footer() {
                 <Twitter className="w-6 h-6" />
               </a>
               <a
-                href="https://youtube.com/@denonciation"
+                href="https://youtube.com/@denonce"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-gray-400 hover:text-red-500 transition"
@@ -130,10 +130,10 @@ export default function Footer() {
             <div className="flex items-center space-x-2 text-gray-400">
               <Mail className="w-4 h-4" />
               <a
-                href="mailto:denonciation.world@gmail.com"
+                href="mailto:contact@denonce.app"
                 className="hover:text-red-500 transition"
               >
-                denonciation.world@gmail.com
+                contact@denonce.app
               </a>
             </div>
           </div>

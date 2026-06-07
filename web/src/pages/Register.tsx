@@ -74,6 +74,13 @@ export default function Register() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4">
       <div className="max-w-2xl w-full bg-white rounded-lg shadow p-8">
+        {/* Logo D */}
+        <div className="text-center mb-6">
+          <div className="inline-block w-24 h-24 bg-gradient-to-br from-red-600 to-red-700 rounded-xl flex items-center justify-center shadow-xl mb-4 mx-auto">
+            <span className="text-6xl font-black text-white">D</span>
+          </div>
+        </div>
+
         <h2 className="text-2xl font-bold text-center mb-6">Inscription</h2>
         
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

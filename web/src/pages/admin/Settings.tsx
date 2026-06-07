@@ -18,7 +18,7 @@ export default function AdminSettings() {
   const [settings, setSettings] = useState({
     siteName: 'Dénonce',
     siteDescription: "Plateforme de signalement d'abus",
-    contactEmail: 'contact@denonciation.com',
+    contactEmail: 'contact@denonce.app',
     moderationAutoApprove: false,
     userRegistrationEnabled: true,
     commentsEnabled: true,
