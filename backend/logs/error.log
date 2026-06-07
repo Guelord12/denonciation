@@ -2379,22 +2379,22 @@
 2026-04-20 09:46:01:461 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
 2026-04-20 09:48:00:480 [31merror[39m: [31mQuery error:[39m
 2026-04-20 09:48:00:480 [31merror[39m: [31m❌ AI Moderation error: la colonne u.trust_score n'existe pas[39m
-2026-04-20 09:50:01:501 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:50:01:501 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:50:01:501 [31merror[39m: [31mQuery error:[39m
 2026-04-20 09:50:01:501 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
-2026-04-20 09:52:01:521 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:52:01:521 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:52:01:521 [31merror[39m: [31mQuery error:[39m
 2026-04-20 09:52:01:521 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
-2026-04-20 09:54:01:541 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:54:01:541 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:54:01:541 [31merror[39m: [31mQuery error:[39m
 2026-04-20 09:54:01:541 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
-2026-04-20 09:56:00:560 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:56:00:560 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:56:00:560 [31merror[39m: [31mQuery error:[39m
 2026-04-20 09:56:00:560 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
-2026-04-20 09:58:00:580 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:58:00:580 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:58:00:580 [31merror[39m: [31mQuery error:[39m
 2026-04-20 09:58:00:580 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
-2026-04-20 10:00:00:00 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 10:00:00:00 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 10:00:01:01 [31merror[39m: [31mQuery error:[39m
 2026-04-20 10:00:01:01 [31merror[39m: [31m❌ AI Moderation error: syntaxe en entrée invalide pour le type integer : « 41.35 »[39m
 2026-04-20 10:02:02:22 [31merror[39m: [31mQuery error:[39m

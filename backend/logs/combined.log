@@ -12722,8 +12722,8 @@
 2026-04-20 08:57:11:5711 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 08:57:11:5711 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 08:57:12:5712 [32minfo[39m: [32m✅ Africa's Talking SMS provider initialized[39m
-2026-04-20 08:57:12:5712 [32minfo[39m: [32m📱 Sending SMS to +243818704804: [DENONCIATION] Avertissement #1: Vous avez violer ...[39m
-2026-04-20 08:57:12:5712 [32minfo[39m: [32m[SMS MOCK] To: +243818704804 - Message: [DENONCIATION] Avertissement #1: Vous avez violer le règle d'utilisation de notre plateforme veuillez rectifier votre signaleùent[39m
+2026-04-20 08:57:12:5712 [32minfo[39m: [32m📱 Sending SMS to +243818704804: [DENONCE] Avertissement #1: Vous avez violer ...[39m
+2026-04-20 08:57:12:5712 [32minfo[39m: [32m[SMS MOCK] To: +243818704804 - Message: [DENONCE] Avertissement #1: Vous avez violer le règle d'utilisation de notre plateforme veuillez rectifier votre signaleùent[39m
 2026-04-20 08:57:12:5712 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 08:57:12:5712 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 08:57:12:5712 [32minfo[39m: [32m::1 - - [20/Apr/2026:07:57:12 +0000] "POST /api/admin/users/6/warn HTTP/1.1" 200 58 "http://localhost:3000/admin/users" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36"[39m
@@ -13033,7 +13033,7 @@
 2026-04-20 09:50:00:500 [32minfo[39m: [32m✅ Loaded 12 banned words from database[39m
 2026-04-20 09:50:00:500 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:50:00:500 [36mdebug[39m: [36mExecuted query[39m
-2026-04-20 09:50:01:501 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:50:01:501 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:50:01:501 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:50:01:501 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:50:01:501 [36mdebug[39m: [36mExecuted query[39m
@@ -13046,7 +13046,7 @@
 2026-04-20 09:52:00:520 [32minfo[39m: [32m🤖 [AI Scheduler] Starting auto-moderation...[39m
 2026-04-20 09:52:01:521 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:52:01:521 [36mdebug[39m: [36mExecuted query[39m
-2026-04-20 09:52:01:521 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:52:01:521 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:52:01:521 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:52:01:521 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:52:01:521 [36mdebug[39m: [36mExecuted query[39m
@@ -13059,7 +13059,7 @@
 2026-04-20 09:54:00:540 [32minfo[39m: [32m🤖 [AI Scheduler] Starting auto-moderation...[39m
 2026-04-20 09:54:01:541 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:54:01:541 [36mdebug[39m: [36mExecuted query[39m
-2026-04-20 09:54:01:541 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:54:01:541 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:54:01:541 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:54:01:541 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:54:01:541 [36mdebug[39m: [36mExecuted query[39m
@@ -13072,7 +13072,7 @@
 2026-04-20 09:56:00:560 [32minfo[39m: [32m🤖 [AI Scheduler] Starting auto-moderation...[39m
 2026-04-20 09:56:00:560 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:56:00:560 [36mdebug[39m: [36mExecuted query[39m
-2026-04-20 09:56:00:560 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:56:00:560 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:56:00:560 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:56:00:560 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:56:00:560 [36mdebug[39m: [36mExecuted query[39m
@@ -13085,7 +13085,7 @@
 2026-04-20 09:58:00:580 [32minfo[39m: [32m🤖 [AI Scheduler] Starting auto-moderation...[39m
 2026-04-20 09:58:00:580 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:58:00:580 [36mdebug[39m: [36mExecuted query[39m
-2026-04-20 09:58:00:580 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 09:58:00:580 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 09:58:00:580 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:58:00:580 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 09:58:00:580 [36mdebug[39m: [36mExecuted query[39m
@@ -13346,7 +13346,7 @@
 2026-04-20 10:00:00:00 [32minfo[39m: [32m✅ News sync completed[39m
 2026-04-20 10:00:00:00 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 10:00:00:00 [36mdebug[39m: [36mExecuted query[39m
-2026-04-20 10:00:00:00 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonciation\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
+2026-04-20 10:00:00:00 [31merror[39m: [31mImage analysis error: ENOENT: no such file or directory, open 'C:\Users\user\denonce\backend\https:\res.cloudinary.com\drvrgtjfa\image\upload\v1776672802\reports\fzqiw1w3aruwqel1ijig.jpg'[39m
 2026-04-20 10:00:00:00 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 10:00:00:00 [36mdebug[39m: [36mExecuted query[39m
 2026-04-20 10:00:00:00 [36mdebug[39m: [36mExecuted query[39m

@@ -1,4 +1,4 @@
-# Dénonciation - Plateforme de Signalement d'Abus
+# Dénonce - Plateforme de Signalement d'Abus
 
 Application complète de signalement d'abus avec streaming live, interface web et mobile.
 
@@ -49,8 +49,8 @@ Application complète de signalement d'abus avec streaming live, interface web e
 
 ```bash
 # Cloner le projet
-git clone https://github.com/votre-compte/denonciation.git
-cd denonciation
+git clone https://github.com/votre-compte/denonce.git
+cd denonce
 
 # Configurer les variables d'environnement
 cp backend/.env.example backend/.env

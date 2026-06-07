@@ -18,6 +18,7 @@ import { api } from '../services/api';
 import { useAuthStore } from '../stores/authStore';
 import { formatDistance } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { Video, ResizeMode } from 'expo-av';
 import {
   MapPin,
   Calendar,
@@ -376,7 +377,18 @@ export default function ReportDetailScreen() {
 
       {/* Media */}
       {report.media_path && (
-        <Image source={{ uri: report.media_path }} style={styles.media} />
+        report.media_type === 'video' ? (
+          <View style={styles.videoWrapper}>
+            <Video
+              source={{ uri: report.media_path }}
+              style={styles.media}
+              useNativeControls
+              resizeMode={ResizeMode.CONTAIN}
+            />
+          </View>
+        ) : (
+          <Image source={{ uri: report.media_path }} style={styles.media} />
+        )
       )}
 
       {/* Location */}
@@ -714,6 +726,14 @@ const styles = StyleSheet.create({
   visibilityInfoBox: {
     padding: 12,
     borderRadius: 8,
+    marginBottom: 16,
+  },
+  videoWrapper: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    borderRadius: 16,
+    overflow: 'hidden',
+    backgroundColor: '#000',
     marginBottom: 16,
   },
   visibilityInfoHeader: {

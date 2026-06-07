@@ -1,11 +1,11 @@
 -- =====================================================
--- BASE DE DONNÉES : denonciation_db
+-- BASE DE DONNÉES : denonce_db
 -- UTILISATEUR : postgres
 -- MOT DE PASSE : Olgambukula20
 -- =====================================================
 
 -- Création de la base de données (à exécuter séparément si besoin)
--- CREATE DATABASE denonciation_db OWNER postgres;
+-- CREATE DATABASE denonce_db OWNER postgres;
 
 -- =====================================================
 -- 1. SUPPRESSION DES TABLES EXISTANTES (ordre inverse des dépendances)
@@ -462,7 +462,7 @@ VALUES (
     'Administrateur',
     'Système',
     'admin',
-    'admin@denonciation.com',
+    'admin@denonce.com',
     '$2b$10$N9qo8uLOickgx2ZMRZoMy.Mr7nJ9vU5zQ5sL5qZ5qZ5qZ5qZ5qZ5q',
     true,
     '/assets/avatars/admin-avatar.png',

@@ -5,7 +5,7 @@ const pool = new Pool({
   host: 'localhost',
   user: 'postgres',
   password: 'Olgambukula20',
-  database: 'denonciation_db',
+  database: 'denonce_db',
   port: 5432,
 });
 
@@ -24,7 +24,7 @@ async function createAdmin() {
       await pool.query(
         `INSERT INTO users (username, email, password_hash, first_name, last_name, is_admin, is_banned)
          VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-        ['admin', 'admin@denonciation.com', hash, 'Administrateur', 'Système', true, false]
+        ['admin', 'admin@denonce.com', hash, 'Administrateur', 'Système', true, false]
       );
       console.log('✅ Compte admin créé avec succès !');
     } else {

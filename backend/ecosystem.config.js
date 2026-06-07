@@ -1,6 +1,6 @@
 module.exports = {
   apps: [{
-    name: 'denonciation-backend',
+    name: 'denonce-backend',
     script: 'dist/index.js',
     instances: 1,
     autorestart: true,

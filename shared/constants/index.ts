@@ -1,4 +1,4 @@
-export const APP_NAME = 'Dénonciation';
+export const APP_NAME = 'Dénonce';
 export const APP_VERSION = '1.0.0';
 export const APP_DESCRIPTION = 'Plateforme de signalement d\'abus et d\'injustices';
 

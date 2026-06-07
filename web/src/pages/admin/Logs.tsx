@@ -71,6 +71,47 @@ const ACTION_COLORS: Record<string, string> = {
   ADMIN_ACTION: 'bg-purple-100 text-purple-700',
 };
 
+const parseLogDetails = (details: any) => {
+  if (!details) return null;
+  if (typeof details === 'string') {
+    try {
+      return JSON.parse(details);
+    } catch {
+      return null;
+    }
+  }
+  return details;
+};
+
+const getLogLocation = (log: any) => {
+  const details = parseLogDetails(log.details || log.metadata);
+  if (!details) return '-';
+
+  if (typeof details === 'object') {
+    if (details.location) {
+      const location = details.location;
+      if (typeof location === 'string') return location;
+      if (location.latitude != null && location.longitude != null) {
+        return `${Number(location.latitude).toFixed(4)}, ${Number(location.longitude).toFixed(4)}`;
+      }
+    }
+
+    if (details.latitude != null && details.longitude != null) {
+      return `${Number(details.latitude).toFixed(4)}, ${Number(details.longitude).toFixed(4)}`;
+    }
+
+    if (details.city || details.country) {
+      return [details.city, details.country].filter(Boolean).join(', ');
+    }
+
+    if (details.ip_location) {
+      return details.ip_location;
+    }
+  }
+
+  return '-';
+};
+
 export default function AdminLogs() {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
@@ -190,6 +231,7 @@ export default function AdminLogs() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Utilisateur</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Détails</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Localisation</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">IP</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Localisation</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
@@ -213,6 +255,9 @@ export default function AdminLogs() {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500">
                         {log.entity_type && log.entity_id ? `${log.entity_type} #${log.entity_id}` : '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {getLogLocation(log)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-500 font-mono">
                         {log.ip_address || '-'}

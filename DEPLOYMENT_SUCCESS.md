@@ -16,7 +16,7 @@
 
 ### 2️⃣ **Push sur GitHub**
 ```
-Repository: https://github.com/Guelord12/denonciation
+Repository: https://github.com/Guelord12/denonce
 Branch: main
 Commits: 0b435cdef (latest)
 Status: ✅ Synchronisé
@@ -24,11 +24,11 @@ Status: ✅ Synchronisé
 
 ### 3️⃣ **Déploiement Web sur S3**
 ```
-Bucket: s3://denonciation-frontend-485215542538/
+Bucket: s3://denonce-frontend-485215542538/
 Files Uploaded: 10 fichiers
 Total Size: 11.2 MB
 Status: ✅ Complet
-Command: aws s3 sync ./dist/ s3://denonciation-frontend-485215542538/ --delete
+Command: aws s3 sync ./dist/ s3://denonce-frontend-485215542538/ --delete
 ```
 
 ### 4️⃣ **Vérification EC2**
@@ -36,7 +36,7 @@ Command: aws s3 sync ./dist/ s3://denonciation-frontend-485215542538/ --delete
 Instance: ubuntu@16.171.39.76
 OS: Ubuntu 22.04 LTS (6.17.0-1007-aws)
 Node.js: v20.20.2
-Service: denonciation-backend (running)
+Service: denonce-backend (running)
 Status: ✅ En ligne depuis 25 jours
 Memory: 95.9 MB
 Uptime: Stable
@@ -47,7 +47,7 @@ Uptime: Stable
 ## 🚀 Services Déployés
 
 ### Frontend (S3 + CloudFront)
-- **URL**: denonciation-frontend-485215542538.s3.amazonaws.com
+- **URL**: denonce-frontend-485215542538.s3.amazonaws.com
 - **Static Site**: index.html + assets
 - **Build**: Vite v6.4.2
 - **Size**: 11.2 MB gzipped
@@ -60,7 +60,7 @@ Uptime: Stable
 
 ### Backend (EC2)
 - **Instance**: ubuntu@16.171.39.76
-- **Service**: denonciation-backend (PM2)
+- **Service**: denonce-backend (PM2)
 - **Node.js**: v20.20.2
 - **Process ID**: 63774
 - **Memory**: 95.9 MB
@@ -109,7 +109,7 @@ c15e24503 - feat: mise à jour des modifications locales
 ## 🔐 Sécurité & Infrastructure
 
 ### AWS Resources
-- **S3**: denonciation-frontend-485215542538
+- **S3**: denonce-frontend-485215542538
 - **EC2**: 16.171.39.76 (t3.small)
 - **CloudFront**: CDN ready
 - **RDS**: Database ready
@@ -160,18 +160,18 @@ c15e24503 - feat: mise à jour des modifications locales
 
 ### Test Web Deployment
 ```bash
-curl https://denonciation-frontend-485215542538.s3.amazonaws.com/
+curl https://denonce-frontend-485215542538.s3.amazonaws.com/
 ```
 
 ### Test EC2 Backend
 ```bash
-ssh -i denonciation-key.pem ubuntu@16.171.39.76
-pm2 logs denonciation-backend
+ssh -i denonce-key.pem ubuntu@16.171.39.76
+pm2 logs denonce-backend
 ```
 
 ### Test S3 Bucket
 ```bash
-aws s3 ls s3://denonciation-frontend-485215542538/
+aws s3 ls s3://denonce-frontend-485215542538/
 ```
 
 ---
@@ -180,7 +180,7 @@ aws s3 ls s3://denonciation-frontend-485215542538/
 
 ### Pour la Production Complète
 1. Configurer CloudFront distribution
-2. Ajouter custom domain (denonciation.app)
+2. Ajouter custom domain (denonce.app)
 3. Configurer Certificate Manager SSL
 4. Lancer RDS PostgreSQL
 5. Configurer ElastiCache Redis

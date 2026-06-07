@@ -14,7 +14,7 @@
 - ✓ LiveStreamScreen.tsx mobile: Correction handleShare (undefined → stream.id)
 
 **Renommage Application:**
-- ✓ APP_NAME: "Dénonciation" → "Denonce" (config/constants.ts, utils/constants.ts)
+- ✓ APP_NAME: "Dénonce" → "Denonce" (config/constants.ts, utils/constants.ts)
 - ✓ HomeScreen mobile: Logo et titre "Denonce"
 - ✓ LoginScreen mobile: Titre "Denonce"
 - ✓ Maintenance cohérence marque
@@ -41,7 +41,7 @@
 ```
 1. fix: corriger erreurs TypeScript et problèmes d'authentification
 2. feat: ajouter logo D + rapport des travaux réalisés  
-3. fix: corriger erreurs TypeScript et renommer Dénonciation en Denonce
+3. fix: corriger erreurs TypeScript et renommer Dénonce en Denonce
 4. feat: ajouter palette de couleurs unifiée web/mobile
 ```
 

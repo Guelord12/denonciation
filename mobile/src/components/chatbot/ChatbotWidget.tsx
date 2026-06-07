@@ -233,6 +233,8 @@ export default function ChatbotWidget() {
                 placeholder="Écrivez votre message..."
                 placeholderTextColor={theme.colors.placeholder}
                 multiline
+                onSubmitEditing={handleSend}
+                blurOnSubmit={false}
               />
               <TouchableOpacity
                 style={[
@@ -242,6 +244,8 @@ export default function ChatbotWidget() {
                 ]}
                 onPress={handleSend}
                 disabled={!inputMessage.trim() || chatbotMutation.isPending}
+                activeOpacity={0.8}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
                 <Send color="#FFF" size={18} />
               </TouchableOpacity>
@@ -373,7 +377,8 @@ const makeStyles = (theme: any) => StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    maxHeight: 100,
+    minHeight: 44,
+    maxHeight: 120,
     fontSize: 14,
     borderWidth: 1,
     marginRight: 8,

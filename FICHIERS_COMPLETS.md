@@ -8,7 +8,7 @@
 ## 🗂️ Structure du Projet
 
 ```
-denonciation/
+denonce/
 ├── web/                              # Application web React
 │   ├── src/
 │   │   ├── pages/
@@ -168,7 +168,7 @@ denonciation/
 ### Web (S3)
 ```bash
 npm run build:web
-aws s3 sync .\dist\ s3://denonciation-frontend-485215542538/ --delete
+aws s3 sync .\dist\ s3://denonce-frontend-485215542538/ --delete
 ```
 
 ### Mobile
@@ -179,7 +179,7 @@ eas build --platform ios --profile production
 
 ### Backend (EC2)
 ```bash
-ssh -i "C:\Users\user\Downloads\denonciation-key.pem" ubuntu@16.171.39.76
+ssh -i "C:\Users\user\Downloads\denonce-key.pem" ubuntu@16.171.39.76
 ```
 
 ## 🔐 Sécurité

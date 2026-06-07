@@ -205,7 +205,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     await query(
       `INSERT INTO notifications (user_id, type, content)
        VALUES ($1, 'welcome', $2)`,
-      [user.id, `Bienvenue ${user.username} sur Dénonciation ! Votre compte a été créé avec succès.`]
+      [user.id, `Bienvenue ${user.username} sur Dénonce ! Votre compte a été créé avec succès.`]
     );
 
     // ✅ Envoyer un email de bienvenue (asynchrone, non bloquant)
@@ -231,7 +231,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         try {
           const smsResult = await sendSMS(
             phone,
-            `[Dénonciation] Bienvenue ${user.first_name || user.username} ! Votre compte a été créé avec succès. Merci de contribuer à une société plus juste.`
+            `[Dénonce] Bienvenue ${user.first_name || user.username} ! Votre compte a été créé avec succès. Merci de contribuer à une société plus juste.`
           );
           if (smsResult.success) {
             console.log(`✅ [REGISTER] Welcome SMS sent to ${phone}`);
